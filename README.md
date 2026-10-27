@@ -82,6 +82,17 @@ category folders such as `clothing/`, `electronics/`, `household/`. Use **Invent
 → Rescan library** (or the CLI `scripts/scan_assets.py`) to index them; thumbnails
 are generated automatically. New folders are picked up with no code changes.
 
+### Net worth
+
+**Net worth** (sidebar, under Money) lists the things you own and prices each
+row: how many you have, how many more you may need, what one costs and what
+yours add up to. The total is *derived* from your inventory - you never type it
+in - and is re-recorded automatically whenever an item or a price changes, so
+the saved figure cannot drift out of step with your records. Rows carry their
+picture from the same asset library (matched by category folder), and an item
+with no price keeps the total **unknown** rather than counting it as free.
+`GET /api/networth` serves the same data.
+
 ### Uninstall
 
 ```bash
