@@ -1,0 +1,1604 @@
+# LIFESMART — Complete Product Review, Page-by-Page Specification, Dynamic Asset System & Coding-Agent To-Do List
+
+**Product name:** LifeSmart  
+**Tagline:** Plan. Manage. Grow.  
+**Initial market:** Kenya  
+**Product type:** Personal life-management, inventory, shopping, finance, savings, goal-planning and AI assistant platform  
+**Primary objective:** Help users understand what they own, what they need, what they can afford, what they should prioritize, and what actions they need to take next.
+
+---
+
+# PART 1 — PROJECT REVIEW
+
+## 1.1 Executive summary
+
+LifeSmart is a personal life-management platform that connects everyday possessions, shopping, finances, savings, earnings, personal goals, school expenses, accommodation, food, tasks and reminders into one system.
+
+Instead of using separate notebooks, spreadsheets, budgeting applications, shopping lists and reminder applications, users manage their lives from a single platform.
+
+For example, a student at Chuka University might own five pairs of trousers but want twenty. LifeSmart records the five existing pairs, identifies the shortage of fifteen, helps estimate the cost of acquiring them, compares available shopping options, considers school fees and food expenses, and recommends a realistic purchase plan.
+
+The same system can manage household goods, savings targets, side businesses, rent, hostels, tuition, emergency funds and long-term goals such as purchasing a car.
+
+The platform must combine three important capabilities:
+
+1. **Accurate records:** What the user owns, earns, spends, owes and plans.
+2. **Reliable calculations:** What is missing, how much it costs, what is affordable and which goal should come first.
+3. **AI assistance:** Understand requests, interpret images, propose plans, explain recommendations and help create tasks.
+
+AI must not invent financial records, confirm payments that never occurred, or claim that a booking or purchase succeeded without verification.
+
+## 1.2 Main objectives
+
+- Track possessions and desired quantities.
+- Calculate item shortages and estimated replacement costs.
+- Manage shopping lists, prices, sellers and transport costs.
+- Record income, expenses, transfers, cash, M-PESA and bank balances.
+- Track savings and side-business profitability.
+- Plan school fees, accommodation, food and other student expenses.
+- Create long-term goals and prioritize them.
+- Turn goals into achievable tasks and reminders.
+- Use image analysis to organize pictures automatically.
+- Provide clear reports, forecasts and explanations.
+- Support mobile and desktop users.
+- Keep user data private, secure and exportable.
+
+## 1.3 Target users
+
+- University and college students.
+- Individuals managing personal finances.
+- Households managing shared possessions and expenses.
+- Professionals planning purchases and savings.
+- Small-business owners tracking earnings and costs.
+
+## 1.4 Example user journey
+
+A user says: “I have five trousers, and I want twenty. I also need to pay fees and buy food.”
+
+LifeSmart should:
+
+1. Read the existing inventory and confirm that five trousers are recorded.
+2. Calculate the shortage: twenty minus five equals fifteen.
+3. Obtain a user-supplied estimate or verified current price for the trousers.
+4. Calculate the projected purchase cost.
+5. Check the available budget, upcoming school fees and food allocation.
+6. Rank the purchase alongside other goals using transparent priorities.
+7. Suggest a realistic saving or purchasing schedule.
+8. Create proposed tasks and reminders.
+9. Update progress only when the user confirms a purchase or a verified transaction is recorded.
+
+The result is a connected life-management system, not simply a collection of unrelated pages.
+
+---
+
+# PART 2 — DYNAMIC IMAGE SYSTEM
+
+## 2.1 Your image-management requirement
+
+You will manually download the pictures and place them inside the relevant asset folders. You should not need to rename them, write image URLs into code, or register each image manually.
+
+The application should discover new files automatically.
+
+For example, you could place:
+
+- `IMG_3821.jpg`
+- `download (3).webp`
+- `photo_2026.png`
+
+inside the trousers folder. Their filenames remain unchanged.
+
+LifeSmart scans those files, creates image records, generates thumbnails, analyzes their contents and makes suitable images available to the interface.
+
+## 2.2 Asset folder structure
+
+Create the following directories in the project:
+
+```text
+LifeSmart/
+├── apps/
+│   ├── web/
+│   └── api/
+├── assets/
+│   ├── clothing/
+│   │   ├── trousers/
+│   │   ├── shorts/
+│   │   ├── jeans/
+│   │   ├── shirts/
+│   │   ├── t-shirts/
+│   │   ├── jackets/
+│   │   ├── shoes/
+│   │   ├── socks/
+│   │   ├── underwear/
+│   │   └── accessories/
+│   ├── household/
+│   │   ├── sufurias/
+│   │   ├── plates/
+│   │   ├── cups/
+│   │   ├── spoons/
+│   │   ├── cooking-utensils/
+│   │   ├── bedding/
+│   │   ├── furniture/
+│   │   └── cleaning/
+│   ├── electronics/
+│   │   ├── phones/
+│   │   ├── laptops/
+│   │   ├── chargers/
+│   │   ├── headphones/
+│   │   └── accessories/
+│   ├── food/
+│   │   ├── cereals/
+│   │   ├── vegetables/
+│   │   ├── fruits/
+│   │   ├── meat/
+│   │   ├── groceries/
+│   │   └── prepared-food/
+│   ├── student-life/
+│   │   ├── hostels/
+│   │   ├── study-materials/
+│   │   ├── stationery/
+│   │   └── student-essentials/
+│   ├── transport/
+│   │   ├── cars/
+│   │   ├── motorcycles/
+│   │   ├── bicycles/
+│   │   └── public-transport/
+│   ├── finance/
+│   │   ├── mpesa/
+│   │   ├── banks/
+│   │   ├── savings/
+│   │   └── business/
+│   ├── goals/
+│   ├── illustrations/
+│   ├── avatars/
+│   └── branding/
+├── scripts/
+│   ├── scan_assets.py
+│   ├── analyze_images.py
+│   ├── generate_thumbnails.py
+│   └── build_asset_manifest.py
+├── docs/
+├── tests/
+└── README.md
+```
+
+Empty folders should be created automatically during project setup. If you later add a new category folder, the asset scanner should detect it.
+
+The coding agents must not require every subfolder to exist permanently. Categories should be configurable.
+
+## 2.3 How image discovery works
+
+The application needs an asset indexing service.
+
+**Workflow:**
+
+1. Scan the configured asset root.
+2. Discover supported image files recursively.
+3. Compute a file hash to identify duplicate files.
+4. Record each file's relative path, size, format, dimensions and modification time.
+5. Infer its broad category from the folder.
+6. Analyze its visual contents when image analysis is available.
+7. Generate thumbnails for fast rendering.
+8. Save metadata in an asset index or database.
+9. Make images available through an asset API.
+10. Refresh the index when files are added, removed or changed.
+
+Use a filesystem watcher during development and periodic or manual rescanning as a fallback. Do not require the entire image library to be rescanned on every page load.
+
+### No-renaming rule
+
+The original filename must be preserved. Internal identifiers, hashes and database IDs should identify assets.
+
+The UI must not depend on filenames to determine whether a picture represents trousers, shorts, a phone or a sufuria.
+
+### Image analysis
+
+Use a pluggable image-analysis interface. Possible implementations include:
+
+- A local vision-language model for offline image classification.
+- An embedding model for visual similarity and duplicate detection.
+- An optional authorized cloud vision API.
+- Folder-based classification as the fallback.
+
+Analysis should return structured metadata, such as:
+
+- Predicted category.
+- Predicted item type.
+- Confidence score.
+- Optional visual attributes such as dominant color.
+- Optional similarity matches to existing catalogue items.
+
+The model must not assume the exact brand, price, quality or seller from the photograph alone. These details require verified data or user input.
+
+### Dynamic image API
+
+Implement endpoints similar to:
+
+- `GET /api/assets?category=clothing/trousers`
+- `GET /api/assets?category=household/sufurias`
+- `GET /api/assets/{asset_id}`
+- `GET /api/assets/{asset_id}/thumbnail`
+- `POST /api/assets/scan`
+- `GET /api/assets/scan/status`
+
+Protect management endpoints with appropriate authentication and authorization.
+
+The frontend should request images from this API rather than maintaining a manually written image list.
+
+### Image-selection behavior
+
+The application should support:
+
+- Selecting a random suitable image for a generic category card.
+- Selecting a consistent image based on an inventory item ID.
+- Showing several different images in product galleries.
+- Prioritizing an image explicitly selected by the user.
+- Filtering by image-analysis results and confidence.
+- Falling back to a neutral placeholder if no image is available.
+- Avoiding repetitive images where a gallery contains multiple items.
+
+Do not randomly change an item's photograph on every render. Use a stable selection until the user changes it or the asset library is updated.
+
+### Performance and privacy
+
+- Support JPEG, PNG and WebP; add other formats only when properly tested.
+- Validate actual file contents rather than trusting extensions.
+- Reject corrupted files and enforce upload/file size limits where applicable.
+- Generate responsive thumbnails.
+- Lazy-load images outside the visible viewport.
+- Keep original assets separate from generated thumbnails.
+- Prevent path traversal and unauthorized access to local files.
+- Do not expose arbitrary server filesystem paths to the browser.
+- Do not send private personal photographs to external vision APIs without explicit authorization.
+- Record asset attribution and licensing information where applicable.
+
+**Important:** A browser cannot reliably enumerate arbitrary files on a server's filesystem on its own. The scanner, backend or build-time manifest generator must perform discovery. A development-time script can make the assets available, while a backend scanner supports ongoing changes after deployment.
+
+## 2.4 Dynamic image behavior on every page
+
+| Page | Asset behavior |
+|---|---|
+| Dashboard | Select stable images for representative categories and goals. |
+| Inventory | Display images matching the category and the user's selected item. |
+| Shopping | Display catalogue images and verified seller listing images where available. |
+| Money | Use official M-PESA and bank logos from approved local assets. |
+| Savings | Use savings illustrations or category images. |
+| Goals | Display images for the goal type, such as a car or wardrobe. |
+| Tasks | Use small category images only where useful. |
+| Student Life | Display hostel, food, stationery and household images. |
+| AI Assistant | Show image previews when the user supplies or selects a picture. |
+| Reports | Prefer charts and icons over large decorative photographs. |
+| Settings | Use small profile images and branding assets. |
+
+The app must remain usable without images. Pictures improve recognition; they must not become a dependency for financial calculations or core functionality.
+
+---
+
+# PART 3 — APPLICATION NAVIGATION
+
+## 3.1 Desktop navigation
+
+Use a persistent sidebar:
+
+1. Home
+2. Inventory
+3. Shopping
+4. Money
+5. Savings & Earnings
+6. Goals & Priorities
+7. Tasks & Reminders
+8. Student Life
+9. AI Assistant
+10. Reports
+11. Notifications
+12. Settings
+
+The sidebar should collapse on smaller screens. The current page must have a visible active state.
+
+## 3.2 Mobile navigation
+
+Use a bottom navigation bar for:
+
+- Home
+- Goals
+- Shopping
+- Money
+- More
+
+The More menu opens Inventory, Savings & Earnings, Tasks, Student Life, AI Assistant, Reports and Settings.
+
+Do not put every destination into the bottom navigation bar; this would crowd the screen.
+
+## 3.3 Route map
+
+| Page | Route |
+|---|---|
+| Welcome | `/` |
+| Sign in | `/login` |
+| Register | `/register` |
+| Onboarding | `/onboarding` |
+| Home | `/app` |
+| Inventory | `/app/inventory` |
+| Item details | `/app/inventory/:itemId` |
+| Shopping | `/app/shopping` |
+| Shopping item details | `/app/shopping/:itemId` |
+| Money | `/app/money` |
+| Transaction details | `/app/money/transactions/:transactionId` |
+| Savings & Earnings | `/app/earnings-savings` |
+| Goals | `/app/goals` |
+| Goal details | `/app/goals/:goalId` |
+| Tasks | `/app/tasks` |
+| Task details | `/app/tasks/:taskId` |
+| Student Life | `/app/student` |
+| AI Assistant | `/app/assistant` |
+| Reports | `/app/reports` |
+| Notifications | `/app/notifications` |
+| Profile | `/app/profile` |
+| Settings | `/app/settings` |
+
+All protected routes require authentication. Route guards must preserve a requested destination after login where appropriate.
+
+---
+
+# PART 4 — DETAILED PAGE SPECIFICATIONS
+
+## 4.1 Welcome and authentication
+
+### Welcome page
+
+**Purpose:** Explain the product and get users started.
+
+**Content:**
+- LifeSmart logo.
+- Tagline: “Plan. Manage. Grow.”
+- Short explanation of the platform.
+- A relevant lifestyle illustration discovered from the branding or illustrations folder.
+- Primary actions: Get Started and Sign In.
+
+**Buttons:**
+- Get Started → `/register`
+- Sign In → `/login`
+- Learn More → product explanation section.
+
+Avoid making the welcome page dependent on one particular illustration.
+
+### Register page
+
+Fields:
+- Full name.
+- Email.
+- Password.
+- Confirm password.
+- Terms and privacy acknowledgement.
+
+Buttons:
+- Create Account.
+- Sign In Instead.
+- Show/Hide Password.
+
+Validate inputs, display actionable errors and never store plaintext passwords.
+
+### Login page
+
+Fields:
+- Email.
+- Password.
+
+Buttons:
+- Sign In.
+- Forgot Password.
+- Create Account.
+
+Redirect successfully authenticated users to their intended destination or `/app`.
+
+### Onboarding page
+
+Collect only essential setup information:
+
+- Currency, defaulting to KES.
+- Country, initially Kenya.
+- Student status, optional.
+- Preferred financial tracking method.
+- Optional starting balance.
+- Optional first inventory category or goal.
+
+Buttons:
+- Continue.
+- Back.
+- Skip optional steps.
+- Finish Setup.
+
+Do not demand bank credentials or M-PESA PINs.
+
+## 4.2 Home dashboard — `/app`
+
+**Purpose:** Provide a clear summary of the user's current situation.
+
+### Layout
+
+Top bar:
+- Page title.
+- Search.
+- Notification icon.
+- Profile menu.
+
+Main summary cards:
+- Total available balance across selected accounts.
+- Income this month.
+- Expenses this month.
+- Active savings.
+- Active goals.
+- Outstanding obligations.
+
+Other sections:
+- Upcoming fees and bills.
+- Tasks due today.
+- Recently recorded purchases.
+- Inventory shortages.
+- Recommended next actions.
+- Savings and goal progress.
+- Quick-action panel.
+
+### Buttons
+
+- Add Transaction → open transaction form.
+- Add Item → open inventory form.
+- Create Goal → open goal form.
+- Add Task → open task form.
+- View All Inventory → `/app/inventory`.
+- View All Goals → `/app/goals`.
+- View All Tasks → `/app/tasks`.
+- Open AI Assistant → `/app/assistant`.
+- View Reports → `/app/reports`.
+
+### Images
+
+Show small, dynamically selected category images only where they aid recognition. Prefer compact cards and charts over a wall of photographs.
+
+### Behavior
+
+Every dashboard figure must derive from saved records and documented calculations. Empty accounts must not be treated as known zero balances unless the user has explicitly initialized them.
+
+## 4.3 Inventory — `/app/inventory`
+
+**Purpose:** Track what the user owns and what they want to own.
+
+### Page layout
+
+Header:
+- Inventory title.
+- Search field.
+- Category selector.
+- Sort selector.
+- Add Item button.
+
+Summary:
+- Number of distinct item types.
+- Total recorded quantities, where meaningful.
+- Items below target.
+- Estimated replacement cost, clearly labeled as an estimate.
+
+Category filters:
+- Clothing.
+- Household.
+- Electronics.
+- Food.
+- Study materials.
+- Personal care.
+- Transport.
+- Custom categories.
+
+Item cards should display:
+- Dynamic image.
+- Item name.
+- Category.
+- Quantity owned.
+- Target quantity.
+- Shortage.
+- Optional unit price.
+- Estimated cost to reach target.
+- Optional condition or notes.
+
+### Add Item form
+
+Fields:
+- Item name.
+- Category.
+- Quantity owned.
+- Target quantity.
+- Unit.
+- Estimated or verified unit cost.
+- Preferred image, optional.
+- Notes.
+
+Buttons:
+- Save Item.
+- Cancel.
+- Select Image.
+- Remove Selected Image.
+
+### Item calculations
+
+Shortage:
+
+`shortage = max(target_quantity - quantity_owned, 0)`
+
+Estimated cost to reach target:
+
+`shortage × estimated_unit_cost`
+
+Do not calculate a financial total from a missing or unknown unit price. Show “Price needed” instead.
+
+### Item detail page
+
+Show:
+- Main image and optional gallery.
+- Quantity and target.
+- Purchase history.
+- Cost estimate and source.
+- Notes.
+- Related shopping list.
+- Related goals.
+
+Buttons:
+- Edit Item.
+- Adjust Quantity.
+- Add to Shopping List.
+- Create Goal.
+- Record Purchase.
+- View History.
+- Delete Item.
+
+Deleting an item must require confirmation. Preserve historical purchase and transaction records.
+
+### Links
+
+Inventory → Shopping: Add to Shopping List.
+
+Inventory → Goals: Create a target-based goal.
+
+Inventory → Money: Record a purchase or adjust the inventory using an existing transaction.
+
+## 4.4 Shopping — `/app/shopping`
+
+**Purpose:** Plan purchases and compare available options.
+
+### Page sections
+
+- Shopping lists.
+- Items needed.
+- Product catalogue.
+- Price comparison.
+- Transport and delivery costs.
+- Estimated total.
+- Purchased items.
+
+### Shopping item card
+
+Display:
+- Image.
+- Product or requested item name.
+- Required quantity.
+- Reference price.
+- Seller and source, if verified.
+- Delivery or transport estimate.
+- Total estimated cost.
+- Availability status and last-checked time when known.
+
+### Buttons
+
+- New Shopping List.
+- Add Item.
+- Compare Prices.
+- Edit Quantity.
+- Mark Purchased.
+- Record Purchase.
+- Remove from List.
+- Open Seller.
+- Recalculate Total.
+
+### Cost calculation
+
+`estimated_total = item_cost + delivery_cost + transport_cost + applicable_fees`
+
+For multiple items, calculate each line and sum the totals. Prevent delivery costs from being counted twice.
+
+Distinguish clearly between:
+- User-entered estimates.
+- Manually verified prices.
+- Live prices obtained from an authorized integration.
+- Prices that are unavailable or outdated.
+
+Do not display invented offers or claim a product is available without evidence.
+
+### Purchase workflow
+
+When the user records a purchase:
+1. Confirm quantity, amount, date and funding account if applicable.
+2. Record the expense or link to an existing transaction.
+3. Update inventory quantity if the user confirms the purchased items should be added.
+4. Update the linked goal's progress.
+5. Mark the shopping-list line purchased.
+6. Preserve the event in purchase history.
+
+The purchase workflow must be transactional and idempotent so repeated requests do not create duplicate purchases.
+
+## 4.5 Money — `/app/money`
+
+**Purpose:** Maintain accurate financial records.
+
+### Account types
+
+- Cash.
+- M-PESA.
+- Bank account.
+- Other wallet.
+- Custom account.
+
+An account can be tracked manually without connecting to the actual financial institution.
+
+### Page layout
+
+Summary cards:
+- Available recorded balances.
+- Total income.
+- Total expenses.
+- Transfers.
+- Recent transactions.
+
+Filters:
+- Date range.
+- Account.
+- Transaction type.
+- Category.
+- Search.
+
+### Add Transaction form
+
+Fields:
+- Transaction type: income, expense or transfer.
+- Amount.
+- Currency.
+- Date.
+- Category.
+- Source account or destination account.
+- Description.
+- Optional related goal, shopping item or business.
+- Optional reference number.
+
+Buttons:
+- Save Transaction.
+- Cancel.
+- Edit.
+- Delete or Reverse, according to the audit policy.
+- Export.
+
+### Financial rules
+
+- Use integer minor units or precise decimal arithmetic, never binary floating-point for money.
+- Transfers reduce one account and increase another; they are not income or expenses.
+- Do not subtract a purchase twice if an existing transaction already represents it.
+- Display whether balances are manually recorded or synchronized.
+- Record corrections transparently.
+- Never claim a bank or M-PESA account has been verified unless it actually has.
+
+### M-PESA and bank logos
+
+Use official brand assets obtained from approved sources. Display logos on account cards and account-selection controls, not as decorative replacements for transaction data.
+
+Buttons:
+- Add Account.
+- Add Income.
+- Add Expense.
+- Transfer.
+- View Transactions.
+- Export Statement.
+
+## 4.6 Savings & Earnings — `/app/earnings-savings`
+
+**Purpose:** Understand earnings, expenses and savings capacity.
+
+### Sections
+
+- Income sources.
+- Employment income.
+- Side-business earnings.
+- Business expenses.
+- Net business profit.
+- Savings contributions.
+- Emergency fund.
+- Forecast and cash-flow projections.
+
+### Forms
+
+Income source:
+- Name.
+- Expected amount.
+- Frequency.
+- Next expected date, if known.
+- Reliability or confidence estimate.
+- Notes.
+
+Business record:
+- Revenue.
+- Direct costs.
+- Operating expenses.
+- Date.
+- Business name.
+- Related transaction.
+
+Savings contribution:
+- Goal.
+- Amount.
+- Date.
+- Funding account.
+
+### Calculations
+
+`net_business_profit = business_revenue - business_expenses`
+
+`available_for_planning = recorded_available_balance + expected_income - planned_essential_expenses - obligations_due`
+
+The second formula is a planning estimate, not a bank balance. Avoid counting expected income that has already been received.
+
+### Buttons
+
+- Add Income Source.
+- Record Earnings.
+- Record Business Expense.
+- Add Savings Contribution.
+- Create Savings Goal.
+- View Forecast.
+
+The forecast must state its assumptions and distinguish confirmed records from expected values.
+
+## 4.7 Goals & Priorities — `/app/goals`
+
+**Purpose:** Turn wishes into costed, achievable plans.
+
+### Example goals
+
+- Increase trousers from 5 to 20.
+- Own 5 sufurias.
+- Buy a laptop.
+- Pay university fees.
+- Save for a hostel.
+- Build an emergency fund.
+- Buy a car.
+
+### Goal card
+
+Display:
+- Dynamic goal image.
+- Goal title.
+- Target amount or target quantity.
+- Current progress.
+- Remaining amount.
+- Target date, if set.
+- Priority level.
+- Next recommended action.
+
+### Create Goal form
+
+Fields:
+- Goal name.
+- Goal type: money, quantity, obligation or custom.
+- Current progress.
+- Target quantity or target amount.
+- Unit cost, if relevant.
+- Deadline.
+- Priority and urgency.
+- Dependencies.
+- Notes.
+
+### Goal calculations
+
+For a quantity goal:
+
+`remaining_quantity = max(target_quantity - current_quantity, 0)`
+
+`estimated_remaining_cost = remaining_quantity × estimated_unit_cost`
+
+For a financial goal:
+
+`remaining_amount = max(target_amount - amount_saved, 0)`
+
+`required_monthly_saving = remaining_amount / months_remaining`
+
+If the deadline has passed or there is no deadline, use a different status instead of dividing by zero.
+
+### Goal detail page
+
+Sections:
+- Goal summary.
+- Image.
+- Progress chart.
+- Required items or milestones.
+- Estimated cost breakdown.
+- Funding plan.
+- Related shopping lists.
+- Related tasks.
+- Contribution history.
+
+Buttons:
+- Edit Goal.
+- Add Contribution.
+- Add Milestone.
+- Generate Plan.
+- Add to Shopping List.
+- Create Tasks.
+- Pause Goal.
+- Complete Goal.
+
+A completed goal should require explicit confirmation or validated completion criteria.
+
+## 4.8 Priority engine
+
+Priority must not be decided solely by the AI model.
+
+Use a deterministic, explainable rules engine that considers:
+1. Legal or contractual obligations and critical deadlines.
+2. Essential needs, such as food, housing and necessary school fees.
+3. Emergency needs and safety.
+4. Available funds and upcoming committed expenses.
+5. Goal deadlines and consequences of delay.
+6. Importance to the user.
+7. Purchase cost and affordability.
+8. Dependencies and achievable progress.
+
+Do not automatically assume a wardrobe upgrade is more important than school fees or food. Ask the user to resolve important trade-offs when priorities are unclear.
+
+Show explanations such as:
+
+“This goal is ranked first because the payment deadline is approaching and delaying it may affect your studies.”
+
+Users should be able to change their preferences and see how the plan changes.
+
+## 4.9 Tasks & Reminders — `/app/tasks`
+
+**Purpose:** Turn plans into manageable actions.
+
+### Task fields
+
+- Title.
+- Description.
+- Due date.
+- Optional time.
+- Priority.
+- Status.
+- Related goal.
+- Recurrence.
+- Reminder settings.
+
+### Buttons
+
+- Add Task.
+- Edit.
+- Mark Complete.
+- Snooze.
+- Reschedule.
+- Delete.
+- Create Task from Goal.
+- View Calendar.
+
+Task statuses:
+- Proposed.
+- Pending.
+- In progress.
+- Completed.
+- Cancelled.
+
+The AI may suggest tasks, but the user should approve consequential plans before they become active.
+
+Completion should update related goals only according to defined rules. Completing a reminder to pay fees must not be treated as proof that the fees were paid.
+
+## 4.10 Student Life — `/app/student`
+
+**Purpose:** Help students manage school obligations and daily living.
+
+### Sections
+
+**Education expenses**
+- Tuition.
+- Registration fees.
+- Other school charges.
+- Due dates.
+- Amount paid and outstanding balance.
+- Payment evidence or reference.
+
+**Accommodation**
+- Hostel name.
+- Location.
+- Price.
+- Deposit.
+- Availability and last-checked time.
+- Facilities.
+- Booking source.
+
+**Food**
+- Budget.
+- Meal plan.
+- Grocery list.
+- Food inventory.
+- Estimated daily and weekly costs.
+
+**Student essentials**
+- Clothing.
+- Bedding.
+- Utensils.
+- Study materials.
+- Personal care.
+
+### Buttons
+
+- Add Fee Obligation.
+- Record Payment.
+- Find Accommodation.
+- Add Hostel Option.
+- Create Meal Plan.
+- Build Grocery List.
+- Plan Weekly Budget.
+- Add Student Essential.
+
+Never claim a hostel is booked or a fee paid without verified evidence.
+
+## 4.11 AI Assistant — `/app/assistant`
+
+**Purpose:** Let users interact with the system in natural language.
+
+Example requests:
+- “What am I missing in my wardrobe?”
+- “Help me budget for next semester.”
+- “Which goals should I prioritize?”
+- “Find the most affordable way to complete my kitchen.”
+- “Turn my goals into weekly tasks.”
+- “Analyze this product image.”
+
+### Interface
+
+- Conversation history.
+- Message composer.
+- Send button.
+- Optional image attachment.
+- Suggested prompts.
+- Structured result cards.
+- Confirmation controls for proposed actions.
+
+### AI tool capabilities
+
+The assistant can request structured data from authorized application tools:
+- Read inventory.
+- Read budgets and transactions.
+- Calculate shortages.
+- Estimate goal costs.
+- Generate a proposed priority plan.
+- Create proposed tasks.
+- Search verified product sources when available.
+- Request an image-analysis job.
+
+The AI should not directly write arbitrary financial records or execute unrestricted shell commands. Use validated tools with explicit permissions and confirmation where appropriate.
+
+### Image analysis behavior
+
+If the user supplies a photograph of a product, the assistant can identify likely objects and propose a category. It should indicate uncertainty when the image is ambiguous.
+
+If the user asks to add the item to inventory, show the proposed name, category, quantity and optional price, then request confirmation before saving.
+
+## 4.12 Reports — `/app/reports`
+
+Reports:
+- Monthly income and expenses.
+- Spending by category.
+- Account balance history.
+- Savings progress.
+- Goal completion.
+- Inventory shortage cost.
+- Business revenue and profit.
+- Upcoming obligations.
+
+Controls:
+- Date filter.
+- Account filter.
+- Category filter.
+- Export CSV.
+- Print or export PDF.
+
+Use charts and compact tables. Do not fill financial reports with unnecessary photographs.
+
+## 4.13 Notifications — `/app/notifications`
+
+Display:
+- Upcoming obligations.
+- Task reminders.
+- Goal milestones.
+- Budget alerts.
+- Confirmed integration events.
+
+Buttons:
+- Mark Read.
+- Mark All Read.
+- Open Related Item.
+- Snooze.
+- Notification Settings.
+
+Notifications should be generated from persisted rules and scheduled jobs. Do not promise mobile or email delivery until the relevant channel is configured and tested.
+
+## 4.14 Profile and Settings
+
+Profile:
+- Name.
+- Email.
+- Preferred currency.
+- Time zone.
+- Optional profile image.
+- Student or personal profile details.
+
+Settings:
+- Privacy.
+- Data export.
+- Account deletion.
+- Notification preferences.
+- Image analysis settings.
+- Connected integrations.
+- Security.
+- Appearance.
+- Language.
+
+Buttons:
+- Save Changes.
+- Change Password.
+- Export Data.
+- Disconnect Integration.
+- Delete Account.
+
+Destructive actions must have appropriate confirmation and authentication checks.
+
+---
+
+# PART 5 — PAGE CONNECTIONS
+
+The application must share records between modules instead of duplicating them.
+
+## 5.1 Main relationships
+
+- Dashboard → Inventory, Money, Goals, Tasks and Reports.
+- Inventory → Shopping, Goals and Money.
+- Shopping → Purchase Records, Inventory and Money.
+- Money → Savings, Earnings and Reports.
+- Savings & Earnings → Goals and Reports.
+- Goals → Tasks, Shopping and Savings.
+- Student Life → Money, Shopping, Goals and Tasks.
+- AI Assistant → authorized tools for all relevant modules.
+- Notifications → the exact task, goal or obligation that triggered them.
+- Settings → integrations, privacy and account management.
+
+## 5.2 Example end-to-end workflow
+
+1. The user records five trousers and a target of twenty.
+2. LifeSmart calculates a shortage of fifteen.
+3. The user creates a wardrobe goal.
+4. The application estimates the cost using an entered or verified price.
+5. The priority engine considers fees, food and other essential commitments.
+6. The user approves a plan.
+7. The plan creates tasks and a shopping list.
+8. The user records a purchase.
+9. Inventory, spending records and goal progress update consistently.
+10. The dashboard and reports reflect the change.
+
+Every update must use the same underlying records. Do not create disconnected copies of inventory or financial data for different pages.
+
+---
+
+# PART 6 — TECHNICAL ARCHITECTURE
+
+## 6.1 Recommended stack
+
+### Frontend
+- React.
+- TypeScript.
+- Vite.
+- React Router.
+- TanStack Query.
+- React Hook Form.
+- Zod or equivalent validation.
+- A consistent accessible component system.
+- Lucide icons.
+
+### Backend
+- Python.
+- FastAPI.
+- Pydantic.
+- SQLAlchemy.
+- Alembic migrations.
+- PostgreSQL.
+
+### Background processing
+- A task queue or background worker for scheduled jobs and large image scans when needed.
+- A scheduler for reminders.
+- A filesystem watcher for development or controlled server-side asset directories.
+
+### Testing and delivery
+- Pytest for backend tests.
+- Vitest and React Testing Library for frontend tests.
+- Playwright for end-to-end workflows.
+- Docker or another reproducible deployment approach.
+- CI checks, database backups and documented recovery procedures.
+
+Use a simpler implementation when a feature does not require a separate queue, service or model. Do not introduce unnecessary infrastructure during the MVP.
+
+## 6.2 Suggested repository structure
+
+```text
+LifeSmart/
+├── apps/
+│   ├── web/
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   ├── layouts/
+│   │   │   ├── pages/
+│   │   │   ├── features/
+│   │   │   ├── hooks/
+│   │   │   ├── services/
+│   │   │   ├── types/
+│   │   │   └── routes/
+│   │   └── public/
+│   └── api/
+│       ├── app/
+│       │   ├── api/
+│       │   ├── core/
+│       │   ├── models/
+│       │   ├── schemas/
+│       │   ├── services/
+│       │   ├── repositories/
+│       │   ├── workers/
+│       │   └── tests/
+│       └── alembic/
+├── assets/
+├── scripts/
+├── docs/
+├── tests/
+├── infra/
+├── .env.example
+├── README.md
+└── docker-compose.yml
+```
+
+Keep the manually collected image assets outside the frontend source code so that adding pictures does not require modifying application components.
+
+## 6.3 Database entities
+
+Create and relate the following entities where required:
+
+- Users and profiles.
+- Accounts.
+- Transactions and transfer records.
+- Inventory categories.
+- Inventory items and quantity events.
+- Asset files and image-analysis metadata.
+- Shopping lists and shopping-list items.
+- Products, offers and sellers.
+- Purchase records.
+- Income sources.
+- Business records.
+- Savings goals and contributions.
+- General goals and milestones.
+- Tasks and recurring task occurrences.
+- Notifications.
+- Student profiles.
+- Fee obligations and payments.
+- Hostel options and booking references.
+- Meal plans and food inventory.
+- AI conversations and messages.
+- Integration connections.
+- Audit events.
+
+Use migrations, foreign keys, unique constraints and indexes. Enforce user ownership in every query involving private records.
+
+Do not build every optional table before the core workflows are working.
+
+## 6.4 API standards
+
+- Use consistent response formats and HTTP status codes.
+- Validate all request bodies.
+- Authenticate and authorize protected endpoints.
+- Add pagination to large lists.
+- Add filtering and sorting.
+- Avoid exposing internal errors or filesystem paths.
+- Prevent duplicate writes through idempotency where appropriate.
+- Document endpoints using OpenAPI.
+- Use server-side validation even if the frontend already validates forms.
+
+---
+
+# PART 7 — CODING-AGENT EXECUTION PLAN
+
+## 7.1 Rules for every coding agent
+
+1. Read the project specification before writing code.
+2. Inspect the existing repository and preserve useful existing work.
+3. Do not replace the entire project without justification.
+4. Do not invent API endpoints or database fields independently.
+5. Follow the agreed types, schemas and shared contracts.
+6. Do not hardcode product images, image filenames or image URLs.
+7. Do not require the user to rename image files.
+8. Do not fake prices, payments, bookings, bank connections or task completion.
+9. Write tests for calculations and important state changes.
+10. Document setup, environment variables and limitations.
+11. Run relevant tests before marking work complete.
+12. Report modified files, completed tasks, test results and remaining problems.
+
+## 7.2 Agent 1 — Lead architect and project coordinator
+
+**Responsibilities**
+- Inspect the repository.
+- Create the implementation plan.
+- Define shared interfaces and data contracts.
+- Set up milestones.
+- Review other agents' work.
+- Integrate modules and resolve conflicts.
+
+**To-do list**
+- [ ] Inspect the current repository and installed dependencies.
+- [ ] Identify reusable code and existing functionality.
+- [ ] Establish the frontend/backend structure.
+- [ ] Define naming conventions and API conventions.
+- [ ] Agree on shared database entities.
+- [ ] Define error-handling and authentication standards.
+- [ ] Write the development setup instructions.
+- [ ] Create the issue/task breakdown.
+- [ ] Review every pull request or agent change.
+- [ ] Run the complete test suite after integration.
+
+**Deliverable:** A working foundation, shared contracts and an integration plan.
+
+## 7.3 Agent 2 — UI/UX and design-system agent
+
+**Responsibilities**
+- Establish the design system.
+- Build reusable components.
+- Ensure the interface works on mobile and desktop.
+- Define page layouts and accessibility requirements.
+
+**To-do list**
+- [ ] Define typography, spacing, colors, shadows and borders.
+- [ ] Build the desktop sidebar.
+- [ ] Build the mobile navigation.
+- [ ] Create reusable cards, tables, modals and forms.
+- [ ] Create loading, error and empty states.
+- [ ] Design accessible confirmation dialogs.
+- [ ] Create reusable image and thumbnail components.
+- [ ] Document responsive breakpoints.
+- [ ] Test keyboard navigation and basic accessibility.
+
+**Deliverable:** A reusable, responsive UI system.
+
+## 7.4 Agent 3 — Frontend application agent
+
+**Responsibilities**
+- Build the page structure and connect the UI to backend APIs.
+
+**To-do list**
+- [ ] Implement authentication screens.
+- [ ] Implement onboarding.
+- [ ] Build the application shell and route guards.
+- [ ] Build the dashboard.
+- [ ] Build Inventory and Item Details.
+- [ ] Build Shopping and purchase forms.
+- [ ] Build Money and transaction forms.
+- [ ] Build Savings & Earnings.
+- [ ] Build Goals and goal details.
+- [ ] Build Tasks & Reminders.
+- [ ] Build Student Life.
+- [ ] Build AI Assistant.
+- [ ] Build Reports.
+- [ ] Build Notifications, Profile and Settings.
+- [ ] Connect forms to APIs.
+- [ ] Add loading, validation and error states.
+- [ ] Test mobile and desktop layouts.
+
+**Deliverable:** Functional pages backed by real application data.
+
+## 7.5 Agent 4 — Backend and database agent
+
+**Responsibilities**
+- Implement data storage, business APIs and secure access.
+
+**To-do list**
+- [ ] Configure FastAPI and environment settings.
+- [ ] Configure PostgreSQL and migrations.
+- [ ] Implement authentication and authorization.
+- [ ] Create core user, account and inventory entities.
+- [ ] Implement transaction APIs.
+- [ ] Implement shopping and purchase APIs.
+- [ ] Implement goal and task APIs.
+- [ ] Implement student-life APIs.
+- [ ] Add pagination and filtering.
+- [ ] Enforce user-level access controls.
+- [ ] Add validation and audit events.
+- [ ] Document APIs.
+- [ ] Test persistence, ownership and error cases.
+
+**Deliverable:** Secure, documented APIs with persistent storage.
+
+## 7.6 Agent 5 — Dynamic asset and image-analysis agent
+
+**This agent is essential to your requirement that you manually add pictures without renaming them.**
+
+**Responsibilities**
+- Build the asset discovery pipeline.
+- Analyze image contents.
+- Generate thumbnails and expose assets through the API.
+
+**To-do list**
+- [ ] Create the complete asset directory structure.
+- [ ] Implement recursive directory scanning.
+- [ ] Support common image formats.
+- [ ] Preserve original filenames.
+- [ ] Generate stable asset IDs.
+- [ ] Compute file hashes and detect duplicates.
+- [ ] Extract dimensions and file metadata.
+- [ ] Infer broad categories from folder paths.
+- [ ] Implement an optional vision-model adapter.
+- [ ] Save category predictions and confidence scores.
+- [ ] Generate thumbnails.
+- [ ] Implement asset-list and thumbnail APIs.
+- [ ] Add incremental rescanning.
+- [ ] Handle removed, moved and modified files.
+- [ ] Add a placeholder for missing images.
+- [ ] Add a manual rescan control for administrators.
+- [ ] Ensure assets are served safely.
+- [ ] Test with arbitrary filenames and mixed image formats.
+- [ ] Test the addition of a new folder and new image files.
+- [ ] Document attribution and image licensing.
+
+**Acceptance test:** Add an image with a random filename to the trousers folder. Run the scanner. The image should appear in the appropriate category without changing its name or editing frontend code.
+
+**Second acceptance test:** Add an image to a newly created category folder. The scanner should discover it and make it available, even if no hardcoded image entry exists.
+
+**Deliverable:** A working dynamic asset pipeline.
+
+## 7.7 Agent 6 — Financial calculations and priority-planning agent
+
+**Responsibilities**
+- Implement deterministic financial calculations and explainable goal ranking.
+
+**To-do list**
+- [ ] Implement inventory shortage calculations.
+- [ ] Implement estimated replacement-cost calculations.
+- [ ] Implement income and expense summaries.
+- [ ] Implement account balance calculations.
+- [ ] Handle transfers without double-counting income or expenses.
+- [ ] Implement savings progress.
+- [ ] Implement goal funding calculations.
+- [ ] Implement deadline-aware planning.
+- [ ] Account for school fees, food, accommodation and other obligations.
+- [ ] Handle unknown prices and incomplete financial data.
+- [ ] Add configurable priorities and user overrides.
+- [ ] Provide explanations for recommendations.
+- [ ] Test zero, negative, missing and very large values.
+- [ ] Test rounding and currency handling.
+- [ ] Prevent duplicate transaction and purchase events.
+
+**Deliverable:** Tested calculations and an explainable planning engine.
+
+## 7.8 Agent 7 — AI assistant agent
+
+**Responsibilities**
+- Build natural-language interaction and safe tool use.
+
+**To-do list**
+- [ ] Define the AI tool interface.
+- [ ] Implement inventory-query tools.
+- [ ] Implement financial-summary tools.
+- [ ] Implement goal-analysis tools.
+- [ ] Implement shopping-plan tools.
+- [ ] Implement task-proposal tools.
+- [ ] Connect image-analysis results.
+- [ ] Add structured output validation.
+- [ ] Require confirmation for consequential changes.
+- [ ] Prevent unauthorized access to other users' data.
+- [ ] Explain assumptions and uncertainty.
+- [ ] Keep a conversation history according to privacy settings.
+- [ ] Test hallucination-resistant workflows and tool errors.
+
+**Deliverable:** An assistant that uses real application records and safe, validated tools.
+
+## 7.9 Agent 8 — Student Life and reminders agent
+
+**Responsibilities**
+- Build student-specific planning and scheduled notifications.
+
+**To-do list**
+- [ ] Implement fee obligations and due dates.
+- [ ] Implement payment recording.
+- [ ] Implement accommodation records.
+- [ ] Implement food and grocery planning.
+- [ ] Implement student-essential lists.
+- [ ] Implement task scheduling.
+- [ ] Implement recurring tasks.
+- [ ] Implement reminder generation.
+- [ ] Add timezone-aware scheduling.
+- [ ] Add notification preferences.
+- [ ] Test missed, delayed and duplicated scheduled jobs.
+
+**Deliverable:** Reliable student planning and reminder workflows.
+
+## 7.10 Agent 9 — QA, security and testing agent
+
+**Responsibilities**
+- Independently test the complete application.
+
+**To-do list**
+- [ ] Test authentication and authorization.
+- [ ] Test every route.
+- [ ] Test forms and validation.
+- [ ] Test financial calculations.
+- [ ] Test inventory-to-shopping workflows.
+- [ ] Test purchase-to-inventory and purchase-to-finance updates.
+- [ ] Test image scanning and duplicate detection.
+- [ ] Test invalid and corrupted image files.
+- [ ] Test path traversal protection.
+- [ ] Test user-data isolation.
+- [ ] Test API failures and database errors.
+- [ ] Test responsive layouts.
+- [ ] Test accessibility.
+- [ ] Verify that no UI falsely claims external actions succeeded.
+- [ ] Produce a defect report and regression suite.
+
+**Deliverable:** A repeatable test suite and documented defects.
+
+## 7.11 Agent 10 — Deployment and documentation agent
+
+**Responsibilities**
+- Make the project reproducible and ready to deploy.
+
+**To-do list**
+- [ ] Document installation and development commands.
+- [ ] Provide `.env.example`.
+- [ ] Configure local database startup.
+- [ ] Configure production environment variables.
+- [ ] Configure CI checks.
+- [ ] Document database migration and backup procedures.
+- [ ] Document asset folder placement and rescanning.
+- [ ] Document optional vision-model setup.
+- [ ] Document integration limitations.
+- [ ] Configure secure logging and monitoring.
+- [ ] Verify deployment and recovery steps.
+
+**Deliverable:** Reproducible development and deployment instructions.
+
+---
+
+# PART 8 — MILESTONES AND BUILD ORDER
+
+Do not ask ten coding agents to build the whole system independently at the same time. They will create inconsistent interfaces, duplicate logic and incompatible database models.
+
+Use this sequence.
+
+## Milestone 1 — Foundation
+
+- [ ] Inspect the repository.
+- [ ] Set up frontend and backend.
+- [ ] Set up database and migrations.
+- [ ] Implement authentication.
+- [ ] Implement design system and application navigation.
+- [ ] Create asset folders.
+- [ ] Add shared types and API contracts.
+- [ ] Make the application start successfully.
+
+**Acceptance:** A user can register, sign in and navigate the application.
+
+## Milestone 2 — Core records
+
+- [ ] Implement inventory.
+- [ ] Implement accounts.
+- [ ] Implement transactions.
+- [ ] Implement shopping lists.
+- [ ] Implement purchase recording.
+- [ ] Implement asset scanning and thumbnails.
+- [ ] Implement dashboard summaries.
+
+**Acceptance:** A user can record possessions, expenses and purchases; downloaded images can be discovered automatically.
+
+## Milestone 3 — Goals and planning
+
+- [ ] Implement goals.
+- [ ] Implement savings contributions.
+- [ ] Implement shortage and cost calculations.
+- [ ] Implement priority rules.
+- [ ] Implement shopping and goal connections.
+- [ ] Implement reports.
+
+**Acceptance:** A user can set a target, see the shortage and cost estimate, and follow an explainable plan.
+
+## Milestone 4 — Student Life and time management
+
+- [ ] Implement fees.
+- [ ] Implement accommodation records.
+- [ ] Implement meal and grocery planning.
+- [ ] Implement tasks and reminders.
+- [ ] Implement notification preferences.
+
+**Acceptance:** A user can plan school obligations, daily needs and tasks.
+
+## Milestone 5 — AI
+
+- [ ] Implement the AI assistant interface.
+- [ ] Add validated tools.
+- [ ] Add image-analysis integration.
+- [ ] Add proposed-action confirmations.
+- [ ] Add explanations and uncertainty handling.
+- [ ] Test complete end-to-end workflows.
+
+**Acceptance:** The assistant can reason over saved data without inventing records or bypassing permissions.
+
+## Milestone 6 — Integrations and launch preparation
+
+- [ ] Add authorized external data sources where feasible.
+- [ ] Add verified price sourcing.
+- [ ] Add external notification channels if configured.
+- [ ] Complete security and regression tests.
+- [ ] Document backups and deployment.
+- [ ] Test the application on mobile and desktop.
+- [ ] Complete privacy and data-export functionality.
+
+**Acceptance:** The product clearly distinguishes working integrations from features that are still manual or unavailable.
+
+---
+
+# PART 9 — MVP ACCEPTANCE CHECKLIST
+
+Before calling the MVP complete:
+
+- [ ] Registration and login work.
+- [ ] Every listed route has a functional page.
+- [ ] Inventory items persist in the database.
+- [ ] Quantities and shortages calculate correctly.
+- [ ] Missing prices are displayed as unknown, not zero-cost purchases.
+- [ ] Images are discovered without renaming.
+- [ ] Newly added images appear after scanning.
+- [ ] The application handles duplicate images.
+- [ ] The application handles missing or corrupt images gracefully.
+- [ ] Asset categories can be extended.
+- [ ] Transactions persist and calculate accurately.
+- [ ] Transfers do not count as income or expenses.
+- [ ] Purchases update the correct records once.
+- [ ] Goals show accurate progress.
+- [ ] Priority recommendations explain their reasoning.
+- [ ] Student fees and expenses can be tracked.
+- [ ] Tasks and reminders have correct statuses.
+- [ ] AI-generated changes require the appropriate confirmation.
+- [ ] User data is isolated between accounts.
+- [ ] Reports agree with underlying records.
+- [ ] The application works at mobile and desktop sizes.
+- [ ] Setup and deployment instructions are complete.
+
+---
+
+# PART 10 — RULES FOR DYNAMIC ASSETS
+
+These rules are mandatory for all agents.
+
+1. Never require the user to rename an image.
+2. Never hardcode a downloaded product image into a page.
+3. Never assume a particular filename exists.
+4. Never make the application crash because a category folder is empty.
+5. Always support a placeholder when an image is unavailable.
+6. Use stable asset IDs and hashes internally.
+7. Preserve the original image.
+8. Generate thumbnails separately.
+9. Use image analysis as a configurable capability, not an absolute requirement for the app to run.
+10. Keep folder categories and detected image contents separate.
+11. Let the user correct an incorrect classification.
+12. Never infer a product's actual price or seller solely from its photograph.
+13. Never expose arbitrary local file paths through public APIs.
+14. Track source and license information where available.
+15. Ensure image scanning does not block ordinary page navigation.
+
+## Final product principle
+
+**The user manages the pictures; LifeSmart manages discovery, indexing, classification and display.**
+
+You should be able to download new pictures, place them in the appropriate folders and let the system handle the rest. The same principle should apply to the product as a whole: users provide their real records and preferences, the application calculates and organizes them, and AI helps them make better decisions.
+
+The first practical deliverable should be a running application with authentication, a responsive dashboard, inventory, transactions, goals and the working dynamic-asset scanner. Once that foundation is reliable, add the remaining modules in the order specified above.
+

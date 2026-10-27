@@ -1,0 +1,19 @@
+Read the complete LifeSmart specification before modifying the project.
+
+First inspect the existing repository and report its current structure, installed dependencies, working features and missing features. Do not rewrite existing working code without justification.
+
+Then create an implementation plan and establish shared frontend/backend contracts. Prioritize a running application with authentication, responsive navigation, database persistence, inventory, financial transactions, goals and the dynamic asset discovery system.
+
+**Critical requirement:** I will manually download images and place them in the appropriate directories under `assets/`. I will not rename the files. Build a scanner that discovers images recursively, preserves original filenames, generates stable asset IDs, indexes metadata, generates thumbnails and exposes images through an API. New files must appear after a scan without modifying frontend code. Support adding new category folders. Image analysis should be pluggable, with folder-based categorization as a fallback.
+
+Do not hardcode image filenames or URLs. Do not fake financial records, prices, bookings, integrations or task completion. Use precise financial calculations, validate all data, enforce user-level authorization and write tests for core workflows.
+
+Before implementing the remaining modules, report:
+1. Repository findings.
+2. Proposed architecture.
+3. Shared API and data contracts.
+4. Initial implementation tasks.
+5. Dependencies and risks.
+6. Acceptance tests for the first milestone.
+
+Implement the foundation first, run the tests, and report the exact files changed and remaining work. Do not mark any feature complete unless it has been implemented and tested.

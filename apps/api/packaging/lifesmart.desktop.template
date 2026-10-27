@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=LifeSmart
+GenericName=Life manager
+Comment=Inventory, money, goals and plans - all in one place
+Exec=__LIFESMART_BIN__
+Icon=__LIFESMART_ICON__
+Terminal=false
+Categories=Office;Finance;Organization;
+Keywords=life;money;budget;goals;inventory;savings;
+StartupNotify=true
+StartupWMClass=com.lifesmart.app

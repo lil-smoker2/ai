@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+apps/web/dist/
+*.local
+
+# PyInstaller desktop build output
+apps/api/build/
+apps/api/dist/
+apps/api/.tmp_*/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Databases (dev SQLite)
+*.sqlite3
+*.db
+apps/api/lifesmart.db*
+
+# Local AI models
+ai model/*.gguf
+
+# Generated thumbnails (regenerate with scanner)
+assets/.thumbnails/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store

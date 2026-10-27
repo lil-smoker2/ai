@@ -1,0 +1,8 @@
+# Extra tooling needed only to build the Arch desktop app (scripts/build_app.sh).
+# Install into the same venv:  pip install -r requirements-build.txt
+pyinstaller>=6.0
+
+# Optional assistant LLM runtime (a Qwen *.gguf via llama.cpp). Compiles from
+# source, so it is kept out of the light runtime requirements. If it is absent
+# the app still builds and the assistant falls back to its keyword router.
+llama-cpp-python
