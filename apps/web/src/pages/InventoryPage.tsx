@@ -19,6 +19,16 @@ interface NewItemForm {
   quantity_owned: number;
   target_quantity: string;
   estimated_unit_cost: string; // major units; converted to minor
+  price_source: string;
+  price_verified: boolean;
+}
+
+/** How a recorded price is described, so an estimate never reads as a fact. */
+function priceLabel(item: InventoryItem): string {
+  if (item.estimated_unit_cost_minor === null) return "";
+  const parts = [item.price_verified ? "verified" : "estimate"];
+  if (item.price_source) parts.push(item.price_source);
+  return ` (${parts.join(" · ")})`;
 }
 
 export function InventoryPage() {
@@ -36,9 +46,17 @@ export function InventoryPage() {
     queryFn: () => api<ItemPage>("/api/inventory/items"),
   });
 
-  const { register, handleSubmit, reset } = useForm<NewItemForm>({
-    defaultValues: { quantity_owned: 0 },
+  const { register, handleSubmit, reset, watch } = useForm<NewItemForm>({
+    defaultValues: {
+      quantity_owned: 0,
+      estimated_unit_cost: "",
+      price_source: "",
+      price_verified: false,
+    },
   });
+  // A source or a verification tick only mean something about a price that
+  // exists, so the two extra fields stay inert until one is typed.
+  const hasCost = (watch("estimated_unit_cost") ?? "").trim() !== "";
 
   const createItem = useMutation({
     mutationFn: (v: NewItemForm) => {
@@ -47,6 +65,7 @@ export function InventoryPage() {
       if (costMajor !== null && !Number.isFinite(costMajor)) {
         throw new Error("Unit cost must be a number");
       }
+      const source = v.price_source.trim();
       return api<InventoryItem>("/api/inventory/items", {
         body: {
           name: v.name,
@@ -55,6 +74,8 @@ export function InventoryPage() {
           target_quantity: target,
           estimated_unit_cost_minor:
             costMajor !== null ? Math.round(costMajor * 100) : null,
+          price_verified: costMajor !== null ? v.price_verified : false,
+          price_source: costMajor !== null && source ? source : null,
         },
       });
     },
@@ -148,6 +169,27 @@ export function InventoryPage() {
               <input type="number" min={0} step="0.01" {...register("estimated_unit_cost")} />
             </label>
           </div>
+          {/* LifeSmart fetches no price from anywhere: where a figure came from
+              is part of the record, and an unchecked figure stays an estimate. */}
+          <label>
+            Where the price came from (optional)
+            <input
+              placeholder="Town shop, seller, quote…"
+              maxLength={120}
+              disabled={!hasCost}
+              {...register("price_source")}
+            />
+          </label>
+          <label className="field-inline">
+            <input type="checkbox" disabled={!hasCost} {...register("price_verified")} />
+            I checked this price myself
+          </label>
+          {!hasCost && (
+            <p className="muted">
+              Leave the cost empty for something you still need to price - it is
+              kept unknown, never zero.
+            </p>
+          )}
           <button className="btn primary" type="submit" disabled={createItem.isPending}>
             Save Item
           </button>
@@ -187,9 +229,7 @@ export function InventoryPage() {
               <span className="muted">
                 To target: {item.target_quantity === null ? "no target set" :
                   shortageLabel(item.estimated_cost_to_target_minor, item.price_needed)}
-                {item.estimated_unit_cost_minor !== null && !item.price_verified
-                  ? " (estimate)"
-                  : ""}
+                {priceLabel(item)}
               </span>
             </div>
             <div className="qty-controls">

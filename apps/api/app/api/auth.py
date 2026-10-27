@@ -7,38 +7,23 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.security import create_access_token, hash_password, verify_password
-from app.models.inventory import InventoryCategory
 from app.models.user import User
 from app.schemas.auth import (
     GoogleLoginRequest,
     LoginRequest,
-    OnboardingUpdate,
+    ProfileUpdate,
     RegisterRequest,
     TokenResponse,
     UserOut,
 )
+from app.services import account as account_service
 from app.services import google_auth
 from app.core.config import Settings, get_settings
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-DEFAULT_CATEGORIES = [
-    "Clothing",
-    "Household",
-    "Electronics",
-    "Food",
-    "Study materials",
-    "Personal care",
-    "Transport",
-]
-
 # Fixed identity for single-user local mode (the packaged desktop app).
 LOCAL_EMAIL = "local@lifesmart.desktop"
-
-
-def _seed_default_categories(db: Session, user: User) -> None:
-    for name in DEFAULT_CATEGORIES:
-        db.add(InventoryCategory(user_id=user.id, name=name))
 
 
 def _issue_token(user: User, settings: Settings) -> TokenResponse:
@@ -60,7 +45,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db),
     )
     db.add(user)
     db.flush()
-    _seed_default_categories(db, user)
+    account_service.seed_default_categories(db, user)
     db.commit()
     return _issue_token(user, settings)
 
@@ -110,7 +95,7 @@ def google_signin(body: GoogleLoginRequest, db: Session = Depends(get_db),
         )
         db.add(user)
         db.flush()
-        _seed_default_categories(db, user)
+        account_service.seed_default_categories(db, user)
         db.commit()
     return _issue_token(user, settings)
 
@@ -139,7 +124,7 @@ def local_bootstrap(db: Session = Depends(get_db),
         )
         db.add(user)
         db.flush()
-        _seed_default_categories(db, user)
+        account_service.seed_default_categories(db, user)
         db.commit()
     return _issue_token(user, settings)
 
@@ -150,8 +135,9 @@ def me(user: User = Depends(get_current_user)):
 
 
 @router.patch("/me", response_model=UserOut)
-def update_me(body: OnboardingUpdate, db: Session = Depends(get_db),
+def update_me(body: ProfileUpdate, db: Session = Depends(get_db),
               user: User = Depends(get_current_user)):
+    """Update the profile. Email is not accepted here - see ProfileUpdate."""
     data = body.model_dump(exclude_unset=True)
     for field, value in data.items():
         setattr(user, field, value)

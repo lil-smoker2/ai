@@ -51,6 +51,26 @@ class OnboardingUpdate(BaseModel):
     onboarded: bool | None = None
 
 
+class ProfileUpdate(OnboardingUpdate):
+    """Settings page edits: the onboarding fields plus the display name.
+
+    Email is deliberately not here. It is the sign-in identity (and in local
+    desktop mode a fixed machine identity), so changing it would change how -
+    or whether - you can log back in. The UI shows it read-only and says why.
+    """
+    full_name: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @field_validator("full_name")
+    @classmethod
+    def strip_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Name cannot be blank")
+        return cleaned[:120]
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

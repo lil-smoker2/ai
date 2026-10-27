@@ -1,5 +1,6 @@
-/** Route map - matches the spec navigation. Unbuilt modules resolve to an
- * honest placeholder rather than fabricated functionality. */
+/** Route map - matches the spec navigation. Every nav route is a real page now;
+ * pages/UnderConstruction stays available for anything a later milestone
+ * starts before it finishes, so a half-built module never fakes functionality. */
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./layouts/AppShell";
 import { Protected, PublicOnly } from "./routes/Protected";
@@ -21,7 +22,7 @@ import { StudentPage } from "./pages/StudentPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { AssistantPage } from "./pages/AssistantPage";
 import { ReportsPage } from "./pages/ReportsPage";
-import { UnderConstruction } from "./pages/UnderConstruction";
+import { SettingsPage } from "./pages/SettingsPage";
 
 /** Entry route. In local single-user mode the app auto-signs-in, so wait for
  * that and then go straight to the dashboard; only fall back to the Welcome /
@@ -59,16 +60,7 @@ export function App() {
             element={<NotificationsPage />}
           />
           <Route path="assistant" element={<AssistantPage />} />
-          <Route
-            path="settings"
-            element={
-              <UnderConstruction
-                title="Settings"
-                milestone={6}
-                detail="Profile editing, currency/timezone preferences, export and account management arrive in Milestone 6."
-              />
-            }
-          />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>
 

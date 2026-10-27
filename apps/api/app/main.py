@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import (
+    account,
     assistant,
     assets,
     auth,
@@ -23,6 +24,7 @@ from app.api import (
     inventory,
     notifications,
     reports,
+    settings as settings_api,
     shopping,
     student,
     tasks,
@@ -69,6 +71,8 @@ def create_app() -> FastAPI:
     app.include_router(assets.router)
     app.include_router(dashboard.router)
     app.include_router(valuation.router)
+    app.include_router(settings_api.router)
+    app.include_router(account.router)
 
     @app.get("/api/health")
     def health():

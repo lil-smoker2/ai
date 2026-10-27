@@ -948,6 +948,113 @@ select:focus {
   overflow-x: auto;
 }
 
+/* --- Settings --- */
+/* Integrations state their own truth, so each row is text first and a status
+   chip second; the chip colours reuse the badge tones used everywhere else. */
+.integration-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.integration-row:last-of-type {
+  border-bottom: none;
+}
+.integration-row p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-width: 62ch;
+}
+.integration-row .badge {
+  flex-shrink: 0;
+  text-transform: none;
+}
+.integration-row .integration-action {
+  font-size: 0.78rem;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+.legend .badge {
+  text-transform: none;
+}
+.field-note {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+/* Two figures side by side, lighter than a stat card because they sit inside
+   the "Your data" card already. */
+.inline-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin-bottom: 0.75rem;
+}
+.inline-stats div {
+  display: flex;
+  flex-direction: column;
+}
+.inline-stats strong {
+  font-size: 1.15rem;
+}
+input[readonly] {
+  background: var(--bg);
+  color: var(--muted);
+}
+.stored-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.2rem 1rem;
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  font-size: 0.87rem;
+}
+.stored-list span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.privacy-statement {
+  margin: 0.75rem 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.privacy-statement li {
+  margin-bottom: 0.35rem;
+}
+.danger-zone {
+  border-color: #fecaca;
+}
+.danger-zone h2 {
+  color: var(--danger);
+}
+.confirm-field {
+  flex: 1;
+  min-width: 180px;
+  max-width: 260px;
+}
+.btn.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.btn.danger:hover {
+  background: #b91c1c;
+}
+.reset-result {
+  margin-top: 0.75rem;
+}
+
 @media print {
   .no-print,
   .sidebar,

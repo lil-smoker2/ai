@@ -21,7 +21,8 @@ from app.schemas.notifications import (
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
-def _get_or_create(db: Session, user_id: int) -> NotificationPreference:
+def get_or_create(db: Session, user_id: int) -> NotificationPreference:
+    """Also read by the Settings page, so the app never shows two answers."""
     pref = db.scalars(
         select(NotificationPreference).where(NotificationPreference.user_id == user_id)
     ).first()
@@ -36,14 +37,14 @@ def _get_or_create(db: Session, user_id: int) -> NotificationPreference:
 @router.get("/preferences", response_model=NotificationPreferenceOut)
 def get_preferences(db: Session = Depends(get_db),
                     user: User = Depends(get_current_user)):
-    return _get_or_create(db, user.id)
+    return get_or_create(db, user.id)
 
 
 @router.put("/preferences", response_model=NotificationPreferenceOut)
 def update_preferences(body: NotificationPreferenceUpdate,
                        db: Session = Depends(get_db),
                        user: User = Depends(get_current_user)):
-    pref = _get_or_create(db, user.id)
+    pref = get_or_create(db, user.id)
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(pref, field, value)
     pref.updated_at = datetime.now(timezone.utc)

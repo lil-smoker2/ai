@@ -97,7 +97,9 @@ export function ReportsPage() {
         <div className="btn-row">
           <button
             className="btn"
-            onClick={() => downloadFile("/api/reports/export.csv", params)}
+            onClick={() =>
+              downloadFile("/api/reports/export.csv", params, "lifesmart-report.csv")
+            }
           >
             <Download size={16} aria-hidden /> Export CSV
           </button>

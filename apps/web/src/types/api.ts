@@ -608,3 +608,61 @@ export interface Valuation {
   history: NetWorthSaved[];
   note: string;
 }
+
+// --- Settings, privacy and account ---
+
+/** available = works now; on_demand = present but only runs when started;
+ * manual = you do the work and the app records it; not_configured = built but
+ * switched off; unavailable = no such connection exists in this product. */
+export type IntegrationStatus =
+  | "available"
+  | "on_demand"
+  | "manual"
+  | "not_configured"
+  | "unavailable";
+
+export interface Integration {
+  key: string;
+  label: string;
+  status: IntegrationStatus;
+  detail: string;
+  action: string | null;
+}
+
+export interface StoredTable {
+  key: string;
+  label: string;
+  rows: number;
+}
+
+export interface ExcludedTable {
+  key: string;
+  label: string;
+  reason: string;
+}
+
+export interface PrivacyInfo {
+  local_only: boolean;
+  /** The app's own data folder, and only in local desktop mode. */
+  data_dir: string | null;
+  stored: StoredTable[];
+  row_total: number;
+  excluded: ExcludedTable[];
+  statement: string[];
+}
+
+export interface SettingsView {
+  profile: User;
+  preferences: NotificationPreference;
+  integrations: Integration[];
+  privacy: PrivacyInfo;
+  export_note: string;
+}
+
+export interface ResetResult {
+  deleted: Record<string, number>;
+  deleted_total: number;
+  kept: string[];
+  reseeded: string[];
+  note: string;
+}

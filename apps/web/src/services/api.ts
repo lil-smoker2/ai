@@ -82,11 +82,13 @@ export async function fetchObjectUrl(path: string): Promise<string> {
   return URL.createObjectURL(blob);
 }
 
-/** Download an authenticated file (e.g. a CSV report export) and hand it to
- * the browser. Requests stay same-origin like every other API call. */
+/** Download an authenticated file (a CSV report, a data export) and hand it to
+ * the browser. The server's Content-Disposition filename wins when present, so
+ * a zip arrives named; requests stay same-origin like every other API call. */
 export async function downloadFile(
   path: string,
   params: Record<string, string | number | boolean | undefined> = {},
+  fallbackName = "lifesmart-download",
 ): Promise<void> {
   const url = new URL(resolveUrl(path));
   for (const [k, v] of Object.entries(params)) {
@@ -96,11 +98,13 @@ export async function downloadFile(
     headers: { Authorization: `Bearer ${getToken()}` },
   });
   if (!resp.ok) throw new ApiError(resp.status, "Download failed");
+  const disposition = resp.headers.get("content-disposition") ?? "";
+  const named = /filename="?([^";]+)"?/.exec(disposition);
   const blob = await resp.blob();
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = objectUrl;
-  a.download = "lifesmart-report.csv";
+  a.download = named ? named[1].trim() : fallbackName;
   document.body.appendChild(a);
   a.click();
   a.remove();
