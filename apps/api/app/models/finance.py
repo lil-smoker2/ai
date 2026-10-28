@@ -15,7 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 from app.models.user import utcnow
 
-ACCOUNT_TYPES = ("cash", "mpesa", "bank", "wallet", "custom")
+ACCOUNT_TYPES = ("cash", "mpesa", "mshwari", "bank", "wallet", "custom")
 TRANSACTION_TYPES = ("income", "expense", "transfer")
 
 
@@ -26,6 +26,13 @@ class Account(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     name: Mapped[str] = mapped_column(String(120))
     type: Mapped[str] = mapped_column(Enum(*ACCOUNT_TYPES, name="account_type"))
+    # How the money is held, as the person describes it. These three identify
+    # the account in the user's own records: LifeSmart has no M-PESA or bank
+    # connection, so storing a number never makes an account verified, and
+    # is_synced stays False for every account this app creates.
+    mpesa_number: Mapped[str | None] = mapped_column(String(20), default=None)
+    bank_name: Mapped[str | None] = mapped_column(String(80), default=None)
+    account_number: Mapped[str | None] = mapped_column(String(30), default=None)
     # Manually tracked accounts are not institution-verified.
     is_synced: Mapped[bool] = mapped_column(Boolean, default=False)
     # Balance is only meaningful once the user explicitly initialized it.

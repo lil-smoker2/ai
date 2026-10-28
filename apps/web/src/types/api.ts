@@ -58,13 +58,24 @@ export interface ItemPage {
 }
 
 // --- Money ---
-export type AccountType = "cash" | "mpesa" | "bank" | "wallet" | "custom";
+export type AccountType =
+  | "cash"
+  | "mpesa"
+  | "mshwari"
+  | "bank"
+  | "wallet"
+  | "custom";
 export type TransactionType = "income" | "expense" | "transfer";
 
 export interface Account {
   id: number;
   name: string;
   type: AccountType;
+  // Identifiers the person typed for themselves. Null when that kind of
+  // account has no such number, or when it was never recorded.
+  mpesa_number: string | null;
+  bank_name: string | null;
+  account_number: string | null;
   is_synced: boolean;
   initialized: boolean;
   initial_balance_minor: number;
@@ -249,6 +260,69 @@ export interface EarningsSummary {
   assumptions: string[];
 }
 
+/** The ways money can be kept or put to work, as the API names them. */
+export type VehicleKind =
+  | "mpesa"
+  | "bank"
+  | "sacco"
+  | "money_market"
+  | "shares"
+  | "betting"
+  | "other";
+
+/** Which way money moved, seen from the place holding it: "in" went in (saved,
+ * used to buy, staked), "out" came back to you (withdrawn, cashed out, paid). */
+export type VehicleFlowDirection = "in" | "out";
+
+/**
+ * A place money can sit, described by what you were told. `rate_percent` is a
+ * percentage a year as quoted, and it only ever exists next to the date it was
+ * checked: the app is offline and cannot know a platform's current rate. A
+ * vehicle is not a balance - the money itself belongs to a Money-page account.
+ */
+export interface SavingsVehicle {
+  id: number;
+  name: string;
+  kind: VehicleKind;
+  url: string | null;
+  rate_percent: number | null;
+  rate_checked_on: string | null;
+  units: number | null;
+  value_minor: number | null;
+  valued_on: string | null;
+  notes: string | null;
+  created_at: string;
+  // Totals of the flow records. put_in / taken_out are 0 when nothing was ever
+  // recorded; net_in stays null instead, because no record is not a zero.
+  put_in_minor: number;
+  taken_out_minor: number;
+  net_in_minor: number | null;
+  // Only stated when a valuation and records both exist.
+  gain_minor: number | null;
+}
+
+export interface VehicleFlow {
+  id: number;
+  vehicle_id: number;
+  direction: VehicleFlowDirection;
+  amount_minor: number;
+  occurred_on: string;
+  note: string | null;
+  created_at: string;
+}
+
+/** What the recorded rate would give on the amount you typed. Records nothing -
+ * `assumptions` says out loud what the figure rests on. */
+export interface Projection {
+  amount_minor: number;
+  months: number;
+  rate_percent: number;
+  rate_checked_on: string | null;
+  interest_minor: number;
+  total_minor: number;
+  assumptions: string[];
+}
+
 // --- Assets (dynamic image system) ---
 export interface AssetAnalysis {
   predicted_category: string | null;
@@ -406,6 +480,44 @@ export interface NotificationPreference {
   quiet_start: string | null;
   quiet_end: string | null;
   updated_at: string;
+}
+
+// --- What needs attention today ---
+// Derived from the user's own records on every request and never stored, so an
+// alert disappears as soon as the thing behind it changes.
+export type AlertKind = "deadline" | "task" | "fee" | "stock" | "savings";
+export type AlertSeverity = "overdue" | "due" | "soon" | "attention";
+
+export interface NotificationAlert {
+  key: string;
+  kind: AlertKind;
+  severity: AlertSeverity;
+  title: string;
+  detail: string | null;
+  /** Null means this alert holds no money, or the figure was never recorded. */
+  amount_minor: number | null;
+  /** What a period of saving would need to reach the target, when the alert is
+   * about a rate rather than a sum. */
+  period_amount_minor: number | null;
+  period_label: string | null;
+  due_on: string | null;
+  days_out: number | null;
+  link: string;
+}
+
+export interface AlertsResponse {
+  generated_on: string;
+  generated_at: string;
+  /** The currency every *_minor figure below is in. */
+  currency: string;
+  alerts: NotificationAlert[];
+  count: number;
+  /** Kinds the user's own switches hid, so an empty list can say why. */
+  hidden_by_preferences: AlertKind[];
+  in_quiet_hours: boolean;
+  quiet_ends_at: string | null;
+  quiet_start: string | null;
+  quiet_end: string | null;
 }
 
 // --- AI Assistant ---
@@ -664,5 +776,44 @@ export interface ResetResult {
   deleted_total: number;
   kept: string[];
   reseeded: string[];
+  note: string;
+}
+
+// A restore reads an archive the app wrote earlier and reports what bringing it
+// back would mean, before anything is overwritten.
+export interface RestorePreviewTable {
+  key: string;
+  label: string;
+  archive_rows: number;
+  current_rows: number;
+}
+
+export interface RestorePreview {
+  /** When the archive was written, as the file states it. A backup's age is
+   * part of deciding whether to trust it. */
+  generated_at: string | null;
+  currency_of_origin: string | null;
+  current_currency: string;
+  photo_links_kept: number;
+  photo_links_cleared: number;
+  archive_total: number;
+  current_total: number;
+  warnings: string[];
+  tables: RestorePreviewTable[];
+}
+
+export interface RestoreResult {
+  written: Record<string, number>;
+  written_total: number;
+  replaced: Record<string, number>;
+  replaced_total: number;
+  generated_at: string | null;
+  currency: string;
+  currency_changed_from: string | null;
+  photo_links_kept: number;
+  photo_links_cleared: number;
+  warnings: string[];
+  reseeded_categories: boolean;
+  kept: string[];
   note: string;
 }

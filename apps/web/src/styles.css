@@ -12,6 +12,9 @@
   --radius: 12px;
   --sidebar-w: 240px;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* How much of --bg is painted over a section's background picture. Text
+     never sits on the picture itself, but headings do sit on this wash. */
+  --page-bg-wash: rgba(246, 248, 247, 0.78);
 }
 
 * {
@@ -284,6 +287,54 @@ select:focus {
   color: var(--warn);
 }
 
+/* --- What needs attention today --- */
+.alert-row {
+  align-items: flex-start;
+}
+.alert-row strong {
+  display: block;
+}
+.alert-row p {
+  margin: 0.15rem 0 0;
+}
+.alert-money {
+  font-size: 0.85rem;
+  color: var(--text);
+  /* Figures line up when several alerts are open at once. */
+  font-variant-numeric: tabular-nums;
+}
+.alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+/* Severity carries meaning, not decoration: overdue is red, due is amber, a
+   savings goal behind its own pace is blue, and a plain "check this" stays the
+   neutral badge colour. */
+.badge.overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.badge.due {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.badge.soon {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 /* --- Tabs --- */
 .tabs {
   display: flex;
@@ -412,14 +463,6 @@ select:focus {
   text-align: center;
   color: var(--muted);
 }
-.placeholder-card {
-  text-align: center;
-  padding: 2rem;
-}
-.placeholder-card p {
-  max-width: 560px;
-  margin: 0.5rem auto;
-}
 
 /* --- Goals --- */
 .goal-card .goal-header {
@@ -505,6 +548,17 @@ select:focus {
 .shell {
   display: flex;
   min-height: 100vh;
+  /* --page-bg is set per route by AppShell from lib/backgrounds. The wash
+     goes over it so the picture stays a backdrop: it reads in the gutters
+     either side of .content and between cards, never under text. `fixed`
+     holds it still while the page scrolls; a renderer that ignores it simply
+     lets the picture scroll with the content. */
+  background-image: linear-gradient(var(--page-bg-wash), var(--page-bg-wash)),
+    var(--page-bg, none);
+  background-size: auto, cover;
+  background-position: center, center;
+  background-repeat: no-repeat;
+  background-attachment: fixed, fixed;
 }
 .sidebar {
   width: var(--sidebar-w);
@@ -1055,6 +1109,121 @@ input[readonly] {
   margin-top: 0.75rem;
 }
 
+/* --- Settings: bring a backup back --- */
+.restore-pick {
+  display: flex;
+  align-items: end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+.restore-preview {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.restore-warnings {
+  margin: 0.5rem 0;
+  padding-left: 1.1rem;
+  color: #92400e;
+  font-size: 0.85rem;
+}
+.restore-warnings li {
+  margin-bottom: 0.3rem;
+}
+
+/* --- Money: account details --- */
+.field-hint {
+  margin: 0.35rem 0 0.7rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.account-id {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.init-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.init-row input {
+  width: 9rem;
+  margin: 0;
+}
+/* The account a transaction needs, added without leaving the transaction form. */
+.quick-account {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.75rem 0.75rem 0.5rem;
+  margin: 0.5rem 0 0.85rem;
+}
+.quick-account .field-hint:first-child {
+  margin-top: 0;
+}
+/* An account corrected in place. The editor opens under its own row, so the
+   row keeps its divider; only a row with nothing under it loses it. */
+.account-item .list-row {
+  border-bottom: 1px solid var(--border);
+}
+.account-item:last-child .list-row:only-child {
+  border-bottom: none;
+}
+.edit-account {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.75rem 0.75rem 0.5rem;
+  margin: 0.5rem 0 0.75rem;
+}
+.edit-account .field-hint:first-child {
+  margin-top: 0;
+}
+
+/* --- Savings & Earnings: places money can sit --- */
+/* A card opens its own panels below, so the row keeps its divider; only a row
+   with nothing under it loses it. Same rule as an account being edited. */
+.vehicle-item .list-row {
+  border-bottom: 1px solid var(--border);
+}
+.vehicle-item:last-child .list-row:only-child {
+  border-bottom: none;
+}
+.vehicle-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.75rem 0.75rem 0.5rem;
+  margin: 0.5rem 0 0.75rem;
+}
+.vehicle-panel .field-hint:first-child {
+  margin-top: 0;
+}
+/* Off to the platform's own site. The desktop shell sends this to the real
+   browser rather than navigating the app away from itself. */
+.site-link {
+  margin-right: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--brand-dark);
+}
+.projection-result {
+  border-top: 1px solid var(--border);
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+}
+/* The figure is only as good as these, so they are printed under it. */
+.assumption-list {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 @media print {
   .no-print,
   .sidebar,
@@ -1064,6 +1233,10 @@ input[readonly] {
   }
   body {
     background: #fff;
+  }
+  /* No artwork on paper - the section picture is screen decoration only. */
+  .shell {
+    background: none !important;
   }
   .card {
     break-inside: avoid;

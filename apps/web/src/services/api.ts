@@ -110,3 +110,23 @@ export async function downloadFile(
   a.remove();
   URL.revokeObjectURL(objectUrl);
 }
+
+/** Read a downloaded export into the base64 the restore route expects.
+ *
+ * The archive is read here, on this machine, and posted to the same origin that
+ * served the UI - it is never uploaded anywhere else. Chunked encoding keeps a
+ * multi-megabyte zip from overflowing the argument list of a single call. */
+export async function readArchive(file: File | Blob): Promise<string> {
+  const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error("That file could not be read."));
+    reader.readAsArrayBuffer(file);
+  });
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}

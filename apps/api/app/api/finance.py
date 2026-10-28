@@ -19,11 +19,13 @@ from app.schemas.finance import (
     AccountCreate,
     AccountInitialize,
     AccountOut,
+    AccountUpdate,
     BalanceSummary,
     MonthSummary,
     TransactionCreate,
     TransactionOut,
     TransactionPage,
+    normalize_account_details,
 )
 
 router = APIRouter(prefix="/api", tags=["money"])
@@ -64,7 +66,25 @@ def list_accounts(db: Session = Depends(get_db), user: User = Depends(get_curren
 @router.post("/accounts", response_model=AccountOut, status_code=201)
 def create_account(body: AccountCreate, db: Session = Depends(get_db),
                    user: User = Depends(get_current_user)):
-    account = Account(user_id=user.id, name=body.name.strip(), type=body.type)
+    """Create one account.
+
+    The type-specific details have already been validated and normalized by the
+    schema. A balance given here marks the account initialized; a balance left
+    out stays unknown rather than becoming zero, so the Money page can tell the
+    two apart. is_synced is never set: an M-PESA or bank number typed by the
+    person identifies the account, it does not connect to one.
+    """
+    account = Account(
+        user_id=user.id,
+        name=body.name,
+        type=body.type,
+        mpesa_number=body.mpesa_number,
+        bank_name=body.bank_name,
+        account_number=body.account_number,
+    )
+    if body.balance_minor is not None:
+        account.initialized = True
+        account.initial_balance_minor = body.balance_minor
     db.add(account)
     db.commit()
     return _account_out(db, account)
@@ -77,6 +97,52 @@ def initialize_account(account_id: int, body: AccountInitialize,
     account = get_owned(db, Account, account_id, user.id)
     account.initialized = True
     account.initial_balance_minor = body.balance_minor
+    db.commit()
+    return _account_out(db, account)
+
+
+def _kept(sent: str | None, stored: str | None) -> str | None:
+    """Resolve an optional field against what is already stored.
+
+    Sending a field and leaving it out are different requests: a field typed
+    over replaces the stored value, even with blanks, while one absent from the
+    body keeps it. So renaming an account does not have to resend its number.
+    """
+    return stored if sent is None else sent
+
+
+@router.patch("/accounts/{account_id}", response_model=AccountOut)
+def update_account(account_id: int, body: AccountUpdate,
+                   db: Session = Depends(get_db),
+                   user: User = Depends(get_current_user)):
+    """Correct an account instead of deleting it, so its money stays put.
+
+    A balance is the initial figure plus the transactions naming this account,
+    so neither a rename nor a change of kind can move a pesa: an account added
+    by mistake as M-PESA and corrected to a bank still holds what it held.
+    Fields left out keep what was stored, and the rules for the kind are the
+    ones applied at creation, run against the details as they would stand
+    afterwards. is_synced is never touched here - editing a number is still a
+    note about an account, not a connection to one.
+    """
+    account = get_owned(db, Account, account_id, user.id)
+    kind = body.type or account.type
+    try:
+        mpesa_number, bank_name, account_number = normalize_account_details(
+            kind,
+            _kept(body.mpesa_number, account.mpesa_number),
+            _kept(body.bank_name, account.bank_name),
+            _kept(body.account_number, account.account_number),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    if body.name is not None:
+        account.name = body.name
+    account.type = kind
+    account.mpesa_number = mpesa_number
+    account.bank_name = bank_name
+    account.account_number = account_number
     db.commit()
     return _account_out(db, account)
 

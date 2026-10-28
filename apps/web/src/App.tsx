@@ -1,6 +1,7 @@
-/** Route map - matches the spec navigation. Every nav route is a real page now;
- * pages/UnderConstruction stays available for anything a later milestone
- * starts before it finishes, so a half-built module never fakes functionality. */
+/** Route map - matches the spec navigation. Every nav route is a real page
+ * reading real records; the catch-all sends anything else to Home rather than
+ * to a placeholder, so a half-built module can never present an empty screen as
+ * if it worked. */
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./layouts/AppShell";
 import { Protected, PublicOnly } from "./routes/Protected";

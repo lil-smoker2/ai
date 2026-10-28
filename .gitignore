@@ -18,6 +18,9 @@ apps/api/build/
 apps/api/dist/
 apps/api/.tmp_*/
 
+# Throwaway verification scripts: run once against a temp DB, never committed
+apps/api/_scratch_*
+
 # Environment & secrets
 .env
 .env.*

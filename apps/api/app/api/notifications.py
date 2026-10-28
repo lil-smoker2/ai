@@ -1,7 +1,12 @@
-"""Notification preferences API: read and update a user's in-app alert toggles.
+"""Notifications API: the preference switches, and what needs attention today.
 
-Local-first, so these gate the app's own reminders only. Reading creates a
-default row the first time so the client always has something to render.
+Local-first, so these gate the app's own reminders only - nothing here sends
+email or push. Reading the preferences creates a default row the first time so
+the client always has something to render.
+
+/alerts is computed on every call and stores nothing. See app.services.alerts
+for why an alert that was written down would be a worse answer than one
+recomputed from the records it describes.
 """
 from datetime import datetime, timezone
 
@@ -14,9 +19,11 @@ from app.core.database import get_db
 from app.models.notifications import NotificationPreference
 from app.models.user import User
 from app.schemas.notifications import (
+    AlertsOut,
     NotificationPreferenceOut,
     NotificationPreferenceUpdate,
 )
+from app.services import alerts as alerts_service
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -38,6 +45,18 @@ def get_or_create(db: Session, user_id: int) -> NotificationPreference:
 def get_preferences(db: Session = Depends(get_db),
                     user: User = Depends(get_current_user)):
     return get_or_create(db, user.id)
+
+
+@router.get("/alerts", response_model=AlertsOut)
+def get_alerts(db: Session = Depends(get_db),
+               user: User = Depends(get_current_user)):
+    """Every alert the saved records support right now, honouring the switches.
+
+    The response is not cached, deliberately: a client that holds a stale list
+    would keep telling the user about a fee they have just paid off.
+    """
+    pref = get_or_create(db, user.id)
+    return alerts_service.build_alerts(db, user, pref)
 
 
 @router.put("/preferences", response_model=NotificationPreferenceOut)

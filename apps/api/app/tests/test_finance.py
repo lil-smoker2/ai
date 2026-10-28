@@ -2,9 +2,10 @@
 from datetime import date
 
 
-def _account(client, headers, name="Cash", type_="cash"):
+def _account(client, headers, name="Cash", type_="cash", **details):
     return client.post(
-        "/api/accounts", json={"name": name, "type": type_}, headers=headers
+        "/api/accounts", json={"name": name, "type": type_, **details},
+        headers=headers,
     ).json()
 
 
@@ -46,7 +47,8 @@ def test_income_expense_adjust_balance(client, auth_headers):
 
 def test_transfer_moves_funds_without_income_or_expense(client, auth_headers):
     cash = _account(client, auth_headers, "Cash")
-    mpesa = _account(client, auth_headers, "M-PESA", "mpesa")
+    mpesa = _account(client, auth_headers, "M-PESA", "mpesa",
+                     mpesa_number="0712 345 678")
     for a in (cash, mpesa):
         client.post(f"/api/accounts/{a['id']}/initialize",
                     json={"balance_minor": 100000}, headers=auth_headers)

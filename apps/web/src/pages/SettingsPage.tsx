@@ -1,6 +1,6 @@
 /**
  * Settings page: who LifeSmart has on file, what is actually connected, and how
- * to take the data away or start again.
+ * to take the data away, bring it back, or start again.
  *
  * Every claim on this screen is the server's, not the page's. The integration
  * list states per capability whether it works now, only runs when you start it,
@@ -9,6 +9,11 @@
  * app does not have. The same rule reaches the data section: a stored row is
  * counted, an unknown stays unstated, and the account's own sign-in identity is
  * shown but never editable.
+ *
+ * A restore is the one control here that can destroy records you are looking
+ * at, so it lives in features/account/RestoreCard, reads the archive before it
+ * offers the button, and takes every figure from the server rather than
+ * claiming any of its own.
  */
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -26,6 +31,7 @@ import {
   User,
 } from "lucide-react";
 import { api, downloadFile } from "../services/api";
+import { RestoreCard } from "../features/account/RestoreCard";
 import type {
   IntegrationStatus,
   ResetResult,
@@ -157,13 +163,16 @@ export function SettingsPage() {
   const emptyKinds = privacy.stored.length - filled.length;
   // The reset report names tables in the user's words, never as a column key.
   const tableLabels = new Map(privacy.stored.map((t) => [t.key, t.label]));
+  // How many of the five switches are on. Settings states the number and hands
+  // the naming to the Notifications page: the switches have their own labels
+  // there, and a second list of names here would only drift from them.
   const remindersOn = [
-    preferences.deadline_alerts && "deadline alerts",
-    preferences.task_reminders && "task reminders",
-    preferences.fee_due_alerts && "fee alerts",
-    preferences.low_stock_warnings && "low-stock warnings",
-    preferences.savings_nudges && "savings nudges",
-  ].filter((s): s is string => !!s);
+    preferences.deadline_alerts,
+    preferences.task_reminders,
+    preferences.fee_due_alerts,
+    preferences.low_stock_warnings,
+    preferences.savings_nudges,
+  ].filter(Boolean).length;
   const canReset = confirmWord.trim().toUpperCase() === "RESET";
 
   return (
@@ -263,9 +272,9 @@ export function SettingsPage() {
           <Bell size={16} aria-hidden /> Reminders
         </h2>
         <p className="muted">
-          {remindersOn.length === 0
-            ? "All reminders are switched off."
-            : `Switched on: ${remindersOn.join(", ")}.`}{" "}
+          {remindersOn === 0
+            ? "None of the five reminders are switched on."
+            : `${remindersOn} of 5 reminders are switched on.`}{" "}
           {(preferences.quiet_start || preferences.quiet_end) &&
             `Quiet hours ${preferences.quiet_start ?? "-"} to ${preferences.quiet_end ?? "-"}.`}
         </p>
@@ -392,6 +401,9 @@ export function SettingsPage() {
         <p className="muted">{exportNote}</p>
       </div>
 
+      {/* --- Restore --- */}
+      <RestoreCard tableLabels={tableLabels} />
+
       {/* --- Danger zone --- */}
       <div className="card danger-zone">
         <h2>
@@ -405,7 +417,8 @@ export function SettingsPage() {
         <p className="muted">
           It keeps your sign-in and profile details, leaves your image files and
           the picture index where they are, and restores the starter inventory
-          categories. Download an export first if you want a copy.
+          categories. Download an export first if you want a copy: an export you
+          have already saved can be put back above.
         </p>
 
         {resetResult ? (

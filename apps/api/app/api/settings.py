@@ -28,6 +28,9 @@ PRIVACY_STATEMENT = [
     "Money is kept in integer minor units so totals are exact. A value you "
     "never entered stays null - it is never shown or exported as zero.",
     "A data export contains no password, no token and no file-system path.",
+    "An M-PESA number or bank account number you typed is kept with the account "
+    "and appears in an export. It is your own note about your account: no "
+    "connection reads it, and nothing verifies it.",
     "In local desktop mode the sign-in identity is a fixed machine address, "
     "not a real email address, and it cannot be changed.",
 ]
@@ -35,7 +38,9 @@ PRIVACY_STATEMENT = [
 EXPORT_NOTE = (
     "The download is a zip built on this machine: data.json with every row you "
     "own (nulls kept), one CSV per table, manifest.json naming the money "
-    "columns, and a README. Nothing is uploaded to produce it."
+    "columns, and a README. Nothing is uploaded to produce it. The same file "
+    "can be put back with the restore below, so a downloaded export is a backup "
+    "and not only a copy."
 )
 
 
@@ -143,18 +148,22 @@ def integrations(settings: Settings) -> list[dict]:
             "detail": (
                 "There is no M-PESA connection. LifeSmart never reads your "
                 "phone, your wallet balance or your statements; you type what "
-                "you spent or received."
+                "you spent or received. On the Money page you can note the "
+                "phone number an account is held on, and record its M-PESA and "
+                "M-Shwari balances yourself - the number identifies the "
+                "account, it links to nothing."
             ),
-            "action": "Money > Add transaction",
+            "action": "Money > Add account",
         },
         {
             "key": "bank", "label": "Bank feeds", "status": "unavailable",
             "detail": (
                 "No bank or card API is connected and none is planned here. "
-                "An account balance is only ever what you recorded, and an "
-                "uninitialized balance stays unknown."
+                "A bank name and account number on the Money page are your own "
+                "record of where money is kept. An account balance is only ever "
+                "what you recorded, and an uninitialized balance stays unknown."
             ),
-            "action": "Money",
+            "action": "Money > Add account",
         },
         {
             "key": "delivery_channels", "label": "Email, SMS and push alerts",
@@ -170,8 +179,9 @@ def integrations(settings: Settings) -> list[dict]:
             "key": "backup", "label": "Backups", "status": "manual",
             "detail": (
                 "Your data is a single SQLite file plus the images folder. "
-                "Copy them, or download the export on this page, to keep a "
-                "backup. Nothing happens automatically."
+                "Copy them, or download the export on this page and restore it "
+                "later, to keep a backup. Nothing happens automatically, and no "
+                "backup leaves this machine unless you take it off yourself."
             ),
             "action": "Settings > Your data",
         },

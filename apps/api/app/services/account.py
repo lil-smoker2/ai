@@ -20,7 +20,12 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.models.assistant import Conversation, Message, ProposedAction
-from app.models.earnings import BusinessRecord, IncomeSource
+from app.models.earnings import (
+    BusinessRecord,
+    IncomeSource,
+    SavingsVehicle,
+    VehicleFlow,
+)
 from app.models.finance import Account, Transaction
 from app.models.goal import Goal, GoalContribution
 from app.models.inventory import InventoryCategory, InventoryItem, QuantityEvent
@@ -71,6 +76,8 @@ OWNED_TABLES: list[tuple[type, str, str]] = [
     (Goal, "goals", "Goals"),
     (InventoryItem, "inventory_items", "Inventory items"),
     (InventoryCategory, "inventory_categories", "Inventory categories"),
+    (VehicleFlow, "vehicle_flows", "Savings and betting records"),
+    (SavingsVehicle, "savings_vehicles", "Savings vehicles"),
     (Account, "accounts", "Accounts"),
     (IncomeSource, "income_sources", "Income sources"),
     (NetWorthSnapshot, "net_worth_snapshots", "Net worth snapshots"),

@@ -20,14 +20,17 @@ import uvicorn
 
 from app.core.config import data_home, get_settings
 from app.core.database import Base, engine
+from app.core.schema_compat import apply_missing_columns
 
 
 def _ensure_schema() -> None:
-    """Create tables on first run (idempotent). Keeps the desktop app
-    self-contained; Alembic remains the path for hosted/production deploys."""
+    """Create tables on first run (idempotent), then add any column a later
+    release introduced that an existing database is missing. Keeps the desktop
+    app self-contained; Alembic remains the path for hosted/production deploys."""
     import app.models  # noqa: F401  register all mappers on Base.metadata
 
     Base.metadata.create_all(bind=engine)
+    apply_missing_columns(engine, Base)
 
 
 def _free_port(preferred: int = 8756) -> int:

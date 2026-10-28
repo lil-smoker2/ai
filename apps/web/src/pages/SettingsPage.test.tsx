@@ -266,6 +266,26 @@ describe("SettingsPage", () => {
     expect(requests.some((r) => r.url.includes("/api/account/export"))).toBe(true);
   });
 
+  it("sits between the export it restores from and the reset it can undo", async () => {
+    renderPage();
+    const heading = await screen.findByText("Bring a backup back");
+    const card = heading.closest(".card") as HTMLElement;
+    const download = screen.getByRole("button", { name: /Download everything/i });
+    const danger = screen.getByText("Start again").closest(".card") as HTMLElement;
+
+    // Ordered where a person reads it: take a copy, put one back, only then
+    // delete what is here.
+    expect(card.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_PRECEDING)
+      .toBeTruthy();
+    expect(card.compareDocumentPosition(danger) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+    // It asks for a file and waits, with nothing claimed about the archive yet.
+    expect(card.querySelector('input[type="file"]')).toBeInTheDocument();
+    expect(screen.getByText("No file selected.")).toBeInTheDocument();
+    // The reset warning no longer promises there is no way back.
+    expect(screen.getByText(/can be put back above/)).toBeInTheDocument();
+  });
+
   it("will not delete anything before the word RESET is typed", async () => {
     renderPage();
     const button = await screen.findByRole("button", { name: /Delete my records/i });

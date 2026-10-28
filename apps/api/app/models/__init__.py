@@ -1,7 +1,12 @@
 """Database models. Import all here so Base.metadata sees every table."""
 from app.models.asset import Asset, AssetAnalysis
 from app.models.assistant import Conversation, Message, ProposedAction
-from app.models.earnings import BusinessRecord, IncomeSource
+from app.models.earnings import (
+    BusinessRecord,
+    IncomeSource,
+    SavingsVehicle,
+    VehicleFlow,
+)
 from app.models.finance import Account, Transaction
 from app.models.goal import Goal, GoalContribution
 from app.models.inventory import InventoryCategory, InventoryItem, QuantityEvent
@@ -33,6 +38,8 @@ __all__ = [
     "PurchaseRecord",
     "IncomeSource",
     "BusinessRecord",
+    "SavingsVehicle",
+    "VehicleFlow",
     "Task",
     "FeeObligation",
     "FeePayment",

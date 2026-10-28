@@ -43,7 +43,9 @@ def _life(client, headers):
                  quantity_owned=2, target_quantity=4,
                  estimated_unit_cost_minor=150000, price_verified=True,
                  price_source="Town shop")
-    acct = client.post("/api/accounts", json={"name": "M-PESA", "type": "mpesa"},
+    acct = client.post("/api/accounts",
+                       json={"name": "M-PESA", "type": "mpesa",
+                             "mpesa_number": "0712345678"},
                        headers=headers).json()
     tx = client.post("/api/transactions", json={
         "type": "expense", "amount_minor": 300000, "occurred_on": str(date.today()),

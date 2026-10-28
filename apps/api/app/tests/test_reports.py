@@ -4,8 +4,8 @@ narrow real rows, and the CSV export mirrors the ledger."""
 from datetime import date, timedelta
 
 
-def _account(client, headers, name="Cash", type_="cash", balance=0):
-    acct = client.post("/api/accounts", json={"name": name, "type": type_},
+def _account(client, headers, name="Cash", type_="cash", balance=0, **details):
+    acct = client.post("/api/accounts", json={"name": name, "type": type_, **details},
                        headers=headers).json()
     client.post(f"/api/accounts/{acct['id']}/initialize",
                 json={"balance_minor": balance}, headers=headers)
@@ -56,7 +56,8 @@ def test_cash_flow_and_category_reconcile(client, auth_headers):
 
 def test_transfers_never_count_as_income_or_expense(client, auth_headers):
     cash = _account(client, auth_headers, "Cash", balance=100000)
-    mpesa = _account(client, auth_headers, "M-PESA", "mpesa", balance=100000)
+    mpesa = _account(client, auth_headers, "M-PESA", "mpesa", balance=100000,
+                     mpesa_number="0712345678")
     _txn(client, auth_headers, type="transfer", amount_minor=30000,
          from_account_id=cash["id"], to_account_id=mpesa["id"])
 
