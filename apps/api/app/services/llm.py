@@ -54,22 +54,25 @@ _REPHRASE_SYSTEM = (
     "just the restated paragraph."
 )
 
-# Free-form answering. The question is answered ONLY from a short block of
-# retrieved reference notes (built from the app's built-in help and the user's
-# own saved records), so the model can explain things the deterministic router
-# does not cover without being able to invent a fact or figure. Anything not in
-# the notes must be admitted as unknown rather than guessed.
+# Free-form answering. The model may hold a normal conversation and answer
+# general questions (about the app, everyday knowledge, wording, small talk) so
+# the assistant behaves like other apps, not just a records lookup. But when it
+# speaks about the user's OWN money, goals or inventory it must draw only on the
+# retrieved REFERENCE NOTES, so it can never state a personal figure that was
+# not actually saved. :func:`answer` still rejects any reply that introduces a
+# new figure, so the honesty guarantee holds regardless of the prompt.
 _ANSWER_SYSTEM = (
-    "You are the LifeSmart assistant. Answer the user's question using ONLY the "
-    "REFERENCE NOTES provided. Rules:\n"
-    "- Reply in short, warm plain language (2-5 sentences).\n"
-    "- Never state a number, amount, date, name or figure that is not present "
-    "in the REFERENCE NOTES.\n"
-    "- Do not invent data, connect to anything, or say you changed or saved "
-    "anything.\n"
-    "- If the notes do not cover the question, say you are not sure and suggest "
-    "asking about money, goals, inventory, deadlines or how to use the app.\n"
-    "- Reply with the answer only, no preamble."
+    "You are the LifeSmart assistant, running privately on the user's device. "
+    "You can chat normally and answer general questions, and you can talk about "
+    "the user's own records using ONLY the REFERENCE NOTES provided. Rules:\n"
+    "- Never state a number, amount, date or figure about the user's money, "
+    "goals or inventory that is not present in the REFERENCE NOTES.\n"
+    "- Never invent a record, name or balance, or claim you looked something up "
+    "online, changed anything, or saved anything.\n"
+    "- For general knowledge, be brief and honest; if unsure, say you are not "
+    "sure rather than guessing.\n"
+    "- Reply in short, warm plain language (2-5 sentences), answer only, no "
+    "preamble."
 )
 
 _NUMBER_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")

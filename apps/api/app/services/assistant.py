@@ -30,6 +30,7 @@ from app.models.finance import Account, Transaction
 from app.models.goal import Goal, GoalContribution
 from app.models.inventory import InventoryCategory, InventoryItem
 from app.models.student import FeeObligation
+from app.models.tasks import Task
 from app.models.user import User
 from app.services import assistant_help
 from app.services import llm
@@ -508,15 +509,73 @@ def _tool_greeting() -> dict:
     model misreading one) never dumps a data report on the user."""
     return {
         "content": (
-            "Hey there. I'm your LifeSmart assistant. I answer only from your "
+            "Hey there. I'm your LifeSmart assistant. I can talk you through your "
             "own saved records — your money and budget, what you're low on, your "
-            "goals and their priority, fees and deadlines — and I can explain how "
-            "to use the app. Anything I'd change waits for you to confirm it. What "
-            "would you like to look at?"
+            "goals and their priority, fees and deadlines — explain how to use any "
+            "part of the app, or just have a normal chat. Anything I'd change waits "
+            "for you to confirm it. What would you like to do?"
         ),
         "cards": [],
         "proposal": None,
     }
+
+
+def _conv(message: str) -> dict:
+    return {"content": message, "cards": [], "proposal": None}
+
+
+def _conversation(text: str) -> dict | None:
+    """Deterministic answers for everyday, non-database questions so the
+    assistant can hold a normal conversation like other apps even when no local
+    model is loaded.
+
+    It runs only in the router's open tail — after data intents, app-help topics
+    and the record search have had their turn — so it can never intercept a real
+    money/goals/inventory question. Every reply is honest about what the
+    assistant is and where it runs.
+    """
+    low = _norm(text)
+    if not low or len(low) > 60:
+        return None
+
+    def has(*cues: str) -> bool:
+        return any(c in low for c in cues)
+
+    if has("who are you", "who r you", "what are you", "what r you",
+           "your name", "are you a bot", "are you human", "are you an ai",
+           "are you ai", "are you real", "are you a person", "are you a program",
+           "which ai are you", "what are u"):
+        return _conv(
+            "I'm LifeSmart's assistant — a small, private helper that lives on "
+            "this device. I talk you through your own saved records (money, goals, "
+            "inventory, fees, deadlines), explain how to use the app, and can have "
+            "a general chat too. I never invent a figure, and nothing leaves this "
+            "machine.")
+    if has("what can you do", "what do you do", "how can you help",
+           "what can i ask", "what are you capable", "help me get started",
+           "what can you help", "what do you help", "how can you help me",
+           "your capabilities", "what else can you"):
+        return _conv(
+            "I can give you your cash position and what's due, rank your goals by "
+            "urgency, find what you're running low on, turn goals into task "
+            "proposals (you always approve those first), walk you through any "
+            "screen, and chat about general things too. Try asking about your "
+            "budget, your goals, or 'how do I add an expense'.")
+    if has("how do you work", "what model are you", "which model", "are you using a model",
+           "are you online", "do you have internet", "are you connected",
+           "are you on the internet", "do you need internet", "no internet",
+           "are you sending my data", "is my data private", "is my data safe",
+           "do you store my data", "do you collect my data", "who can see my data"):
+        return _conv(
+            "Everything runs on this device. My routing is deterministic and local, "
+            "and the optional on-device model only helps pick a tool or phrase an "
+            "answer — it can't invent a number. I don't use the internet or send "
+            "your data anywhere.")
+    if has("you're welcome", "your welcome", "no worries", "no problem"):
+        return _conv("Anytime. Ask me about your records, the app, or anything else.")
+    if has("can you hear me", "are you there", "you still there", "hello?"):
+        return _conv("I'm here. What can I help you with?")
+    return None
 
 
 # --- retrieval over the project (help + the user's own records) -------------
@@ -618,6 +677,208 @@ def _model_assisted(db: Session, user: User, text: str) -> dict | None:
     return {"content": ans, "cards": [], "proposal": None}
 
 
+# --- keyword search over the user's own records -----------------------------
+#
+# The router maps a message to a single concept and runs one read-tool. Many
+# real questions name a specific thing ("my textbooks", "rent", "that hoodie")
+# that no single concept captures, so before falling back the assistant does a
+# plain keyword search across every relevant table and surfaces each hit with
+# the exact values that are stored. This is grounded entirely in the database:
+# it only lists rows that truly match, shows the figures the user entered,
+# treats a missing price or date as unknown rather than zero, and invents no
+# record. When a model is loaded it may reword the summary, but the records
+# always come from the queries below.
+
+# Filler beyond the shared STOPWORDS: question scaffolding that would otherwise
+# substring-match a lot of records and add noise to a search.
+_RETRIEVE_STOP = frozenset(
+    assistant_help.STOPWORDS | {
+        "all", "any", "every", "each", "thing", "things", "own", "main", "best",
+        "top", "most", "less", "lot", "bunch", "right", "now", "today", "recent",
+        "latest", "currently", "about", "show", "find", "search", "look", "list",
+        "record", "records", "everything", "assistant", "know", "got", "give",
+        "tell", "check", "checking", "database", "save", "saved", "track",
+        "tracked", "detail", "details", "status", "many", "much", "still",
+    }
+)
+
+_MAX_ROWS_PER_KIND = 8
+
+
+def _question_keywords(text: str) -> list[str]:
+    """Content words from the question, stemmed and raw, minus filler."""
+    raw = {w for w in re.findall(r"[a-z0-9']+", (text or "").lower()) if len(w) >= 3}
+    keys = {k.strip("'.") for k in (raw | {assistant_help.stem(w) for w in raw})}
+    return sorted(k for k in keys if len(k) >= 3 and k not in _RETRIEVE_STOP)
+
+
+def _matches(hay: str, keywords: list[str]) -> str | None:
+    """Return the first keyword that appears as a substring of ``hay``."""
+    hay = (hay or "").lower()
+    for k in keywords:
+        if k in hay:
+            return k
+    return None
+
+
+def _search_records(db: Session, user: User, text: str) -> dict | None:
+    """Search inventory, transactions, goals, fees and tasks for the question's
+    own words. Returns rows/counts/matched/keywords, or None when the message
+    has no usable keyword (so the caller can fall through to other handling)."""
+    keywords = _question_keywords(text)
+    if not keywords:
+        return None
+
+    rows: list[dict] = []
+    counts = {"inventory": 0, "money": 0, "goals": 0, "fees": 0, "tasks": 0}
+    matched: set[str] = set()
+
+    # Inventory items (name, category, notes).
+    cat_names = {c.id: c.name for c in db.scalars(
+        select(InventoryCategory).where(InventoryCategory.user_id == user.id)
+    ).all()}
+    for it in db.scalars(
+        select(InventoryItem).where(
+            InventoryItem.user_id == user.id, InventoryItem.deleted_at.is_(None)
+        ).order_by(InventoryItem.name)
+    ).all():
+        if counts["inventory"] >= _MAX_ROWS_PER_KIND:
+            break
+        cat = cat_names.get(it.category_id) or ""
+        hit = _matches(f"{it.name} {cat} {it.notes or ''}", keywords)
+        if hit is None:
+            continue
+        matched.add(hit)
+        counts["inventory"] += 1
+        qty = (f"{it.quantity_owned}/{it.target_quantity}"
+               if it.target_quantity else f"{it.quantity_owned} owned")
+        if it.unit:
+            qty += f" {it.unit}"
+        if it.estimated_unit_cost_minor is None:
+            cost = "price not recorded"
+        else:
+            cost = (f"unit cost {_major(it.estimated_unit_cost_minor)} KES"
+                    + (" (verified)" if it.price_verified else " (estimate)"))
+        rows.append({"heading": it.name,
+                     "sub": f"Inventory · {cat}" if cat else "Inventory",
+                     "badge": qty, "minor": None, "lines": [cost]})
+
+    # Transactions (category, description, reference) - most recent first.
+    for t in db.scalars(
+        select(Transaction).where(Transaction.user_id == user.id)
+        .order_by(Transaction.occurred_on.desc()).limit(300)
+    ).all():
+        if counts["money"] >= _MAX_ROWS_PER_KIND:
+            break
+        hit = _matches(f"{t.category or ''} {t.description or ''} {t.reference or ''}",
+                       keywords)
+        if hit is None:
+            continue
+        matched.add(hit)
+        counts["money"] += 1
+        when = f"{t.occurred_on:%b %d, %Y}" if t.occurred_on else "no date"
+        rows.append({"heading": t.description or (t.category or t.type.title()),
+                     "sub": f"Money · {when}", "badge": t.type,
+                     "minor": t.amount_minor,
+                     "lines": [f"category: {t.category}" if t.category else "no category"]})
+
+    # Goals (name, notes) that are still open.
+    for g in db.scalars(
+        select(Goal).where(Goal.user_id == user.id, Goal.status != "completed")
+        .order_by(Goal.name)
+    ).all():
+        if counts["goals"] >= _MAX_ROWS_PER_KIND:
+            break
+        hit = _matches(f"{g.name} {g.notes or ''}", keywords)
+        if hit is None:
+            continue
+        matched.add(hit)
+        counts["goals"] += 1
+        lines = [f"priority: {g.priority}"]
+        minor = None
+        if g.type == "money" and g.target_amount_minor is not None:
+            saved = db.scalar(
+                select(func.coalesce(func.sum(GoalContribution.amount_minor), 0)).where(
+                    GoalContribution.goal_id == g.id
+                )
+            ) or 0
+            minor = max(g.target_amount_minor - saved, 0)
+            lines.append(f"saved {_major(saved)} of {_major(g.target_amount_minor)} KES")
+        elif g.type == "quantity":
+            lines.append(f"{g.current_quantity or 0}/{g.target_quantity or '?'} collected")
+        rows.append({"heading": g.name, "sub": f"Goal · {g.type}",
+                     "badge": g.status, "minor": minor, "lines": lines})
+
+    # Fee obligations (name, category).
+    for f in db.scalars(
+        select(FeeObligation).where(
+            FeeObligation.user_id == user.id, FeeObligation.deleted_at.is_(None)
+        ).order_by(FeeObligation.name)
+    ).all():
+        if counts["fees"] >= _MAX_ROWS_PER_KIND:
+            break
+        hit = _matches(f"{f.name} {f.category}", keywords)
+        if hit is None:
+            continue
+        matched.add(hit)
+        counts["fees"] += 1
+        outstanding = max(f.amount_due_minor - f.amount_paid_minor, 0)
+        badge = ("paid" if outstanding == 0
+                 else "partial" if f.amount_paid_minor else "unpaid")
+        when = f"due {f.due_on:%b %d}" if f.due_on else "no due date"
+        rows.append({"heading": f.name, "sub": f"Fee · {f.category}",
+                     "badge": badge, "minor": outstanding, "lines": [when]})
+
+    # Tasks (title, description) that are still open.
+    for tk in db.scalars(
+        select(Task).where(
+            Task.user_id == user.id, Task.deleted_at.is_(None),
+            Task.status.in_(("pending", "in_progress", "proposed")),
+        ).order_by(Task.due_on.desc())
+    ).all():
+        if counts["tasks"] >= _MAX_ROWS_PER_KIND:
+            break
+        hit = _matches(f"{tk.title} {tk.description or ''}", keywords)
+        if hit is None:
+            continue
+        matched.add(hit)
+        counts["tasks"] += 1
+        when = f"due {tk.due_on:%b %d}" if tk.due_on else "no due date"
+        rows.append({"heading": tk.title, "sub": f"Task · {when}",
+                     "badge": tk.status, "minor": None, "lines": []})
+
+    return {"rows": rows, "counts": counts, "total": sum(counts.values()),
+            "matched": matched, "keywords": keywords}
+
+
+def _tool_search(db: Session, user: User, text: str, search: dict,
+                 model_ready: bool) -> dict:
+    """Present the grounded search hits as a single list card."""
+    counts = search["counts"]
+    parts = [f"{counts[k]} {label}" for k, label in (
+        ("inventory", "inventory item(s)"), ("money", "transaction(s)"),
+        ("goals", "goal(s)"), ("fees", "fee(s)"), ("tasks", "task(s)"),
+    ) if counts[k]]
+    listing = ", ".join(parts)
+    words = ", ".join(search["keywords"][:4])
+    content = (
+        f"I searched your saved records for “{words}” and found {listing}. Every row "
+        "is a real record shown with the figures you entered; anything marked “not "
+        "recorded” was never saved (I treat it as unknown, not zero) — I invent "
+        "nothing."
+    )
+    result = {
+        "content": content,
+        "cards": [{"kind": "list", "title": "Matching records", "rows": search["rows"]}],
+        "proposal": None,
+    }
+    if model_ready:
+        reworded = llm.rephrase(result["content"])
+        if reworded:
+            result = {**result, "content": reworded}
+    return result
+
+
 # --- helpers ----------------------------------------------------------------
 
 def _assets_root() -> Path:
@@ -646,7 +907,10 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     Image turns go straight to the image tool. Otherwise the message is scored
     against the data concepts and the app-help knowledge base: an explicit
     "how do I use the app" question prefers a help topic, a data question runs
-    its read-tool, and anything unclear falls back to a transparent guide.
+    its read-tool, and a question naming a specific thing that matches no single
+    concept triggers a keyword search across the user's records. Only when even
+    that finds nothing does a transparent fallback explain what the assistant
+    can do.
 
     When the user has loaded the optional local model it strengthens this flow
     without ever owning a figure: it may pick a more accurate data intent and
@@ -683,7 +947,34 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
         return result
     if topic is not None:
         return _tool_apphelp(topic)
+
+    # No single data intent or help topic matched: search the database for
+    # records whose names/categories/descriptions match the question's own
+    # words, so a specific query ("my textbooks", "rent money") still gets a
+    # comprehensive, grounded answer built only from saved rows.
+    search = _search_records(db, user, text)
+    if search is not None and search["total"] > 0:
+        return _tool_search(db, user, text, search, model_ready)
+
     assisted = _model_assisted(db, user, text)
     if assisted is not None:
         return assisted
+
+    # Nothing in the records matched and no model answered: hold a normal
+    # conversation about the assistant, the app or general topics instead of
+    # only ever replying with the records guide.
+    conv = _conversation(text)
+    if conv is not None:
+        return conv
+
+    if search is not None:
+        words = ", ".join(search["keywords"][:4])
+        return {
+            "content": (
+                f"I searched your saved records for “{words}” and found nothing that "
+                "matches. I only ever report what's actually saved, so I won't invent "
+                "a record or figure — try another word or check the spelling."
+            ),
+            "cards": [], "proposal": None,
+        }
     return _tool_help(user)

@@ -210,6 +210,86 @@ def test_obligations_never_claim_a_fee_paid(client, auth_headers):
     assert tuition["minor"] == 60000               # outstanding, from records
 
 
+def test_search_finds_inventory_by_name(client, auth_headers):
+    # A question naming a specific thing no single intent captures still gets a
+    # grounded answer built from the matching saved record.
+    cats = client.get("/api/inventory/categories", headers=auth_headers).json()
+    cat = next(c for c in cats if c["name"].lower() == "clothing")
+    client.post("/api/inventory/items", json={
+        "name": "Sunglasses", "category_id": cat["id"], "quantity_owned": 2,
+        "target_quantity": 4, "estimated_unit_cost_minor": None,
+    }, headers=auth_headers)
+    client.post("/api/inventory/items", json={
+        "name": "Beanie", "category_id": cat["id"], "quantity_owned": 1,
+    }, headers=auth_headers)
+
+    reply = _ask(client, auth_headers, "where are my sunglasses?")["assistant_message"]
+    assert "searched" in reply["content"].lower()
+    rows = next(c for c in reply["cards"] if c["kind"] == "list")["rows"]
+    hit = next(r for r in rows if r["heading"] == "Sunglasses")
+    assert hit["badge"] == "2/4"
+    assert "price not recorded" in hit["lines"]
+    # The unrelated Beanie is not pulled in.
+    assert all(r["heading"] != "Beanie" for r in rows)
+
+
+def test_search_finds_goal_and_shows_saved_amount(client, auth_headers):
+    client.post("/api/goals", json={"name": "Emergency fund", "type": "money",
+                "target_amount_minor": 100000}, headers=auth_headers)
+    reply = _ask(client, auth_headers,
+                 "how much is left for the emergency fund")
+    msg = reply["assistant_message"]
+    rows = next(c for c in msg["cards"] if c["kind"] == "list")["rows"]
+    goal = next(r for r in rows if r["heading"] == "Emergency fund")
+    assert goal["minor"] == 100000            # outstanding, straight from records
+    assert any("saved" in l for l in goal["lines"])
+
+
+def test_search_reports_no_matches_instead_of_inventing(client, auth_headers):
+    # A question whose words match no record is answered honestly: no rows, no
+    # fabricated figures.
+    reply = _ask(client, auth_headers, "quantum flux capacitor")
+    msg = reply["assistant_message"]
+    assert "found nothing" in msg["content"].lower()
+    assert "saved records" in msg["content"].lower()
+    assert msg["cards"] in (None, [])
+
+
+def test_assistant_chats_about_itself_without_a_model(client, auth_headers):
+    # Non-database, everyday questions get a real conversational answer even
+    # when no local model is loaded (like other apps), instead of the guide.
+    who = _ask(client, auth_headers, "who are you?")["assistant_message"]
+    assert "assistant" in who["content"].lower()
+    assert who["cards"] in (None, [])
+    assert who["proposal"] is None
+
+    can = _ask(client, auth_headers, "what can you do")["assistant_message"]
+    assert "budget" in can["content"].lower() or "goal" in can["content"].lower()
+    assert can["cards"] in (None, [])
+
+    priv = _ask(client, auth_headers, "are you connected to the internet")[
+        "assistant_message"
+    ]
+    assert "device" in priv["content"].lower()
+
+
+def test_loaded_model_can_answer_a_non_database_question(client, auth_headers, monkeypatch):
+    # With a model loaded, a general question the router knows nothing about is
+    # handed to the model rather than the records guide.
+    from app.services import llm
+
+    monkeypatch.setattr(llm, "is_ready", lambda: True)
+    monkeypatch.setattr(
+        llm, "answer",
+        lambda context, question: "Paris is the capital of France.",
+    )
+    reply = _ask(client, auth_headers, "what is the capital of france")[
+        "assistant_message"
+    ]
+    assert reply["content"] == "Paris is the capital of France."
+    assert reply["cards"] in (None, [])
+
+
 def test_tasks_proposal_requires_confirmation_then_writes(client, auth_headers):
     client.post("/api/goals", json={"name": "Gym", "type": "custom"},
                 headers=auth_headers)
