@@ -35,11 +35,11 @@ const view: SettingsView = {
   },
   integrations: [
     {
-      key: "local_model",
-      label: "On-device AI model",
-      status: "on_demand",
-      detail: "qwen2.5.gguf is on this machine but not in memory.",
-      action: "AI Assistant > Load model",
+      key: "assistant",
+      label: "AI Assistant",
+      status: "available",
+      detail: "Runs on-device with a deterministic router; no model to load.",
+      action: "Assistant page",
     },
     {
       key: "google_signin",
@@ -218,14 +218,14 @@ describe("SettingsPage", () => {
 
   it("distinguishes what works from what is manual or absent", async () => {
     renderPage();
-    await screen.findByText("On-device AI model");
+    await screen.findByText("AI Assistant");
 
     expect(statusOf("M-PESA")).toBe("Not available");
     expect(statusOf("Bank feeds")).toBe("Not available");
     expect(statusOf("Price sources")).toBe("You do this");
     expect(statusOf("Backups")).toBe("You do this");
     expect(statusOf("Email, SMS and push alerts")).toBe("Switched off");
-    expect(statusOf("On-device AI model")).toBe("Only when you start it");
+    expect(statusOf("AI Assistant")).toBe("Working");
     // The vocabulary is explained once, so a chip is never a bare claim.
     expect(screen.getByText("no such connection exists")).toBeInTheDocument();
     // And the page never claims a payment connection of its own accord.
@@ -301,7 +301,11 @@ describe("SettingsPage", () => {
     expect(await screen.findByText(/Deleted 7 records/)).toBeInTheDocument();
     expect(sentTo("/api/account/reset", "POST")).toEqual({ confirm: "RESET" });
     // A table emptied to zero is not listed as though something was removed.
-    expect(screen.queryByText(/goals/)).not.toBeInTheDocument();
+    // Scoped to the reset-result list so it does not match the free-text
+    // warning paragraph above, which also names "goals".
+    expect(
+      screen.queryByText(/goals/i, { selector: ".reset-result .stored-list li" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText(/account sign-in/)).toBeInTheDocument();
   });
 });

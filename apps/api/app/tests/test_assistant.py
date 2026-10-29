@@ -39,6 +39,72 @@ def test_suggestions_and_auth(client, auth_headers):
     assert client.post("/api/assistant/messages", json={"message": "hi"}).status_code == 401
 
 
+def test_intent_router_handles_phrasing_variations():
+    from app.services import assistant as a
+
+    # Stemming + stopwording means varied wording still routes to one intent.
+    assert a._detect_intent("how much did I spend this month", False) == "budget"
+    assert a._detect_intent("what am I missing", False) == "shortages"
+    assert a._detect_intent("which goals should i prioritise", False) == "priority"
+    assert a._detect_intent("when are my fees due", False) == "obligations"
+    assert a._detect_intent("turn my goals into weekly tasks", False) == "tasks"
+    assert a._detect_intent("banana helicopter", False) == "help"
+
+
+def test_app_help_question_explains_a_screen(client, auth_headers):
+    reply = _ask(client, auth_headers,
+                 "How do I add an expense?")["assistant_message"]
+    # Routed to the app-help knowledge base, not a data tool: names the screen,
+    # returns no grounded cards and invents no figure.
+    assert "Money" in reply["content"]
+    assert reply["cards"] in (None, [])
+    assert reply["proposal"] is None
+
+
+def test_app_help_privacy_question(client, auth_headers):
+    reply = _ask(client, auth_headers,
+                 "Where is my data stored?")["assistant_message"]
+    assert "machine" in reply["content"].lower()
+
+
+def test_unknown_question_falls_back_to_guidance(client, auth_headers):
+    reply = _ask(client, auth_headers, "qwerty zxcv plugh")["assistant_message"]
+    # Transparent about its two modes rather than dead-ending or guessing.
+    assert "saved records" in reply["content"].lower()
+    assert reply["cards"] in (None, [])
+
+
+def test_unmatched_question_uses_loaded_model(client, auth_headers, monkeypatch):
+    # A user who pressed Load, with a model that grounds a reply on retrieved
+    # project context, gets a real answer for a question the router can't match.
+    from app.services import llm
+
+    monkeypatch.setattr(llm, "is_ready", lambda: True)
+    monkeypatch.setattr(
+        llm, "answer",
+        lambda context, question: "I can look at your money, goals and inventory.",
+    )
+    reply = _ask(client, auth_headers, "tell me a joke about the weather")[
+        "assistant_message"
+    ]
+    assert reply["content"] == "I can look at your money, goals and inventory."
+    assert reply["cards"] in (None, [])
+    assert reply["proposal"] is None
+
+
+def test_unmatched_question_falls_back_when_model_refuses(client, auth_headers, monkeypatch):
+    # If the model is ready but its answer fails the honesty guard (returns None)
+    # the assistant keeps the deterministic guidance instead of inventing text.
+    from app.services import llm
+
+    monkeypatch.setattr(llm, "is_ready", lambda: True)
+    monkeypatch.setattr(llm, "answer", lambda context, question: None)
+    reply = _ask(client, auth_headers, "tell me a joke about the weather")[
+        "assistant_message"
+    ]
+    assert "saved records" in reply["content"].lower()
+
+
 def test_budget_reports_no_data_instead_of_inventing(client, auth_headers):
     reply = _ask(client, auth_headers, "Help me budget for this month.")["assistant_message"]
     assert "transaction" in reply["content"].lower()

@@ -67,22 +67,23 @@ def test_eta_comes_from_the_observed_saving_pace(client, auth_headers):
     goal = _goal(client, auth_headers)  # target 6,000,000
     _save(client, auth_headers, goal["id"], 1000000, days_ago=8)
     _save(client, auth_headers, goal["id"], 1000000, days_ago=4)
-    # saved 2,000,000 -> remaining 4,000,000; pace 2,000,000 over 8 days
+    # saved 2,000,000 -> remaining 4,000,000; pace 2,000,000 over the 8 days
+    # since the first contribution = 250,000/day, so 4,000,000 needs 16 days.
     p = _fetch(client, auth_headers, goal["id"])["projection"]
-    assert p["amount_per_day_minor"] == 500000
+    assert p["amount_per_day_minor"] == 250000
     assert p["contribution_count"] == 2
     assert p["window_days"] == 8
-    assert p["days_to_target"] == 8
-    assert p["projected_on"] == (date.today() + timedelta(days=8)).isoformat()
+    assert p["days_to_target"] == 16
+    assert p["projected_on"] == (date.today() + timedelta(days=16)).isoformat()
     assert p["status"] == "no_deadline"
 
 
 def test_deadline_comparison_uses_the_projected_date(client, auth_headers):
     good = _goal(client, auth_headers,
-                 deadline=str(date.today() + timedelta(days=10)))
+                 deadline=str(date.today() + timedelta(days=20)))
     _save(client, auth_headers, good["id"], 1000000, days_ago=8)
     _save(client, auth_headers, good["id"], 1000000, days_ago=4)
-    # projected in 8 days, deadline in 10 -> the pace covers it
+    # projected in 16 days, deadline in 20 -> the pace covers it
     assert _fetch(client, auth_headers, good["id"])["projection"]["status"] \
         == "on_track"
 

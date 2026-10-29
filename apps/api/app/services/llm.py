@@ -54,7 +54,25 @@ _REPHRASE_SYSTEM = (
     "just the restated paragraph."
 )
 
-_NUMBER_RE = re.compile(r"\d[\d,.]*")
+# Free-form answering. The question is answered ONLY from a short block of
+# retrieved reference notes (built from the app's built-in help and the user's
+# own saved records), so the model can explain things the deterministic router
+# does not cover without being able to invent a fact or figure. Anything not in
+# the notes must be admitted as unknown rather than guessed.
+_ANSWER_SYSTEM = (
+    "You are the LifeSmart assistant. Answer the user's question using ONLY the "
+    "REFERENCE NOTES provided. Rules:\n"
+    "- Reply in short, warm plain language (2-5 sentences).\n"
+    "- Never state a number, amount, date, name or figure that is not present "
+    "in the REFERENCE NOTES.\n"
+    "- Do not invent data, connect to anything, or say you changed or saved "
+    "anything.\n"
+    "- If the notes do not cover the question, say you are not sure and suggest "
+    "asking about money, goals, inventory, deadlines or how to use the app.\n"
+    "- Reply with the answer only, no preamble."
+)
+
+_NUMBER_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 _model = None
 _state_lock = threading.Lock()
@@ -191,6 +209,11 @@ def _loaded_model():
     return _model if _state == STATE_READY else None
 
 
+def is_ready() -> bool:
+    """True only while the user has loaded the model; never triggers a load."""
+    return _state == STATE_READY
+
+
 def _complete(model, system: str, user: str, max_tokens: int, temperature: float):
     with _infer_lock:
         out = model.create_chat_completion(
@@ -229,3 +252,62 @@ def rephrase(base_text: str) -> str | None:
     # Honesty guard: the phrasing may reuse numbers from the source but never
     # invent one, so the prose can't contradict the grounded cards.
     return cand if rephrase_acceptable(base_text, cand) else None
+
+
+def _normalized_numbers(text: str) -> set[str]:
+    out: set[str] = set()
+    for tok in _NUMBER_RE.findall(text or ""):
+        tok = tok.strip(".,")
+        if tok:
+            out.add(tok)
+    return out
+
+
+def _is_figure(tok: str) -> bool:
+    """A number worth protecting against invention: one written with thousands
+    or decimal grouping, or a bare integer of value >= 100. Small bare
+    integers are treated as prose enumeration / minor counts, not figures."""
+    digits = tok.replace(",", "").replace(".", "")
+    if not digits.isdigit():
+        return True
+    return "," in tok or "." in tok or int(digits) >= 100
+
+
+def answer_acceptable(context: str, question: str, candidate: str | None) -> bool:
+    """Honesty guard for free-form answers.
+
+    A generated answer may not state a *figure* (a money/quantity value >= 100,
+    or one written with thousands or decimal grouping) that is absent from the
+    retrieved context or the question, so the model cannot invent an amount. A
+    grounded how-to may still use numbered steps and minor counts, which a small
+    model produces naturally and which carry no financial claim.
+    """
+    if not candidate or not candidate.strip():
+        return False
+    allowed = _normalized_numbers(context) | _normalized_numbers(question)
+    for tok in _normalized_numbers(candidate):
+        if tok in allowed:
+            continue
+        if _is_figure(tok):
+            return False
+    return True
+
+
+def answer(context: str, question: str) -> str | None:
+    """Answer a question from retrieved reference notes, or None.
+
+    Returns None when the model is not loaded, when there is nothing to ground
+    on, or when the reply breaks the honesty guard (it stated a figure that was
+    not in the notes) - in every such case the caller keeps its deterministic
+    fallback, so the model only ever adds an answer it can support.
+    """
+    model = _loaded_model()
+    if model is None or not question.strip() or not context.strip():
+        return None
+    prompt = f"REFERENCE NOTES:\n{context}\n\nQUESTION: {question}"
+    try:
+        cand = _complete(model, _ANSWER_SYSTEM, prompt, max_tokens=220,
+                         temperature=0.2)
+    except Exception:
+        return None
+    return cand if answer_acceptable(context, question, cand) else None

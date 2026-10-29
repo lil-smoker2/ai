@@ -1,14 +1,18 @@
-"""Grounded assistant over validated read-tools.
+"""Grounded assistant over validated read-tools, driven by an on-device NLP engine.
 
-Routing is deterministic by default (a transparent keyword router). When the
-user has loaded a local Qwen model (see app.services.llm) it may refine the
-intent classification and reword the summary prose, but it never produces the
-figures. The model is opt-in per session and is never loaded on its own.
-Every number reported is computed from the user's own saved records; unknown
-values stay unknown; and any change it wants to make is returned as a *proposal*
-that only persists after the user confirms it. It never writes financial
-records, never infers a price or seller from a photograph, and never fabricates
-data.
+Routing is deterministic and runs without any language model, so it works on
+every device: each message is normalised, stopworded and stem-tokenised
+(see app.services.assistant_help), then scored against weighted concept tables.
+A strong match on a data concept runs the matching read-tool; a "how do I use
+the app" question matches the app-help knowledge base; otherwise a transparent
+fallback explains what the assistant can do. When the user has loaded the
+optional local Qwen model (app.services.llm) it can sharpen the intent, reword
+a summary and answer otherwise-unmatched questions from retrieved project
+context, but it never owns a figure. Every number reported is computed
+from the user's own saved records; unknown values stay unknown; and any change
+it wants to make is returned as a *proposal* that only persists after the user
+confirms it. It never writes financial records, never infers a price or seller
+from a photograph, and never fabricates data.
 """
 from __future__ import annotations
 
@@ -26,40 +30,71 @@ from app.models.goal import Goal, GoalContribution
 from app.models.inventory import InventoryCategory, InventoryItem
 from app.models.student import FeeObligation
 from app.models.user import User
+from app.services import assistant_help
+from app.services import llm
+from app.services.assistant_help import score, tokenize
 from app.services.analysis import analyze_image
 
 # Priority ordering for goal ranking (higher = more urgent).
 _PRIORITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+
+# A data intent must clear this much weighted-term overlap before we run a
+# read-tool for it; below it the message is treated as app-help or unclear.
+_DATA_THRESHOLD = 3
+
+# Concepts behind each data intent. Order is the tie-break priority (an early
+# intent wins on equal score), mirroring the original keyword router.
+_DATA_CONCEPTS: list[tuple[str, dict[str, int]]] = [
+    ("tasks", {"task": 4, "todo": 4, "schedule": 4, "reminder": 4,
+               "plan": 3, "weekly": 3, "goals into": 3}),
+    ("priority", {"prioritise": 5, "prioritize": 5, "priority": 4, "rank": 4,
+                  "focus": 4, "first": 3, "order": 3, "which goal": 3}),
+    ("obligations", {"fee": 5, "obligation": 5, "due": 4, "deadline": 4,
+                     "tuition": 4, "semester": 3, "upcoming": 3, "payment": 3}),
+    ("shortages", {"missing": 5, "shortage": 5, "restock": 5, "wardrobe": 4,
+                   "need": 3, "low": 3, "stock": 3, "buy": 3, "afford": 2,
+                   "complete": 2, "run out": 3}),
+    ("budget", {"budget": 5, "spend": 5, "spent": 5, "income": 5, "expense": 5,
+                "balance": 4, "cash": 4, "money": 3, "earnings": 4,
+                "afford": 3, "cost": 2, "much": 1}),
+]
+
+# Cues that a message is asking how the app works rather than about stored
+# figures, so a matching help topic should win over a data tool.
+_HOWTO_CUES = ("how do", "how to", "how can", "where do", "where can", "where i",
+               "add a", "add an", "set up", "create", "use the", "what is",
+               "what does", "how much is a", "track my", "scan", "export",
+               "backup", "back up")
 
 
 def _norm(text: str) -> str:
     return " ".join(text.lower().replace("?", " ").split())
 
 
+def _is_howto(text: str) -> bool:
+    low = _norm(text)
+    return any(cue in low for cue in _HOWTO_CUES)
+
+
 # --- intent routing ---------------------------------------------------------
 
 def _detect_intent(text: str, has_asset: bool) -> str:
+    """Score a message against every data concept and return the best intent.
+
+    Returns "help" when nothing clears :data:`_DATA_THRESHOLD`, letting the
+    caller decide between app-help and the transparent fallback.
+    """
     if has_asset:
         return "image"
-    t = _norm(text)
-    if any(k in t for k in ("task", "to do", "todo", "schedule", "plan my week",
-                            "turn my goals", "weekly plan", "reminders")):
-        return "tasks"
-    if any(k in t for k in ("priorit", "which goal", "rank", "focus", "order my goals",
-                            "what should i do")):
-        return "priority"
-    if any(k in t for k in ("fee", "fees", "obligation", "due", "deadline",
-                            "upcoming", "when do i", "semester fees")):
-        return "obligations"
-    if any(k in t for k in ("missing", "shortage", "run out", "need to buy",
-                            "what do i need", "wardrobe", "stock", "low on",
-                            "affordable", "complete my", "cost to", "restock")):
-        return "shortages"
-    if any(k in t for k in ("budget", "spend", "spent", "income", "expense",
-                            "balance", "cash", "money", "afford", "earnings",
-                            "how much")):
-        return "budget"
-    return "help"
+    tokens = tokenize(text)
+    if not tokens:
+        return "help"
+    best_intent, best_score = "help", 0
+    for intent, terms in _DATA_CONCEPTS:
+        s = score(tokens, terms)
+        if s > best_score:
+            best_intent, best_score = intent, s
+    return best_intent if best_score >= _DATA_THRESHOLD else "help"
 
 
 # --- read-tools -------------------------------------------------------------
@@ -405,19 +440,119 @@ def _tool_image(db: Session, user: User, asset_id: str) -> dict:
     return {"content": content, "cards": cards, "proposal": proposal}
 
 
-def _tool_help(user: User) -> dict:
+def _tool_apphelp(topic: assistant_help.HelpTopic) -> dict:
     return {
-        "content": (
-            "I answer from your saved records only — I don't guess or invent data. "
-            "Try: “What am I missing in my wardrobe?”, “Help me budget for next "
-            "semester.”, “Which goals should I prioritize?”, “What fees are due?”, "
-            "“Turn my goals into weekly tasks.”, or attach a product image to "
-            "classify it. Anything I'd change is shown as a proposal you confirm "
-            "first."
-        ),
+        "content": f"{topic.answer} You do this on {topic.screen}.",
         "cards": [],
         "proposal": None,
     }
+
+
+def _tool_help(user: User) -> dict:
+    return {
+        "content": assistant_help.UNKNOWN_GUIDANCE,
+        "cards": [],
+        "proposal": None,
+    }
+
+
+# --- retrieval over the project (help + the user's own records) -------------
+#
+# When the deterministic router has no confident answer, we assemble a short,
+# grounded block of "reference notes" for the optional local model: the closest
+# app-help topics (searched even when they score below the match threshold) plus
+# a live summary of the user's saved figures. Every number in here comes from
+# the database, so the model can only restate what LifeSmart already knows.
+
+def _major(minor: int | None) -> str:
+    return "not recorded" if minor is None else str(int(round(minor / 100)))
+
+
+def _help_notes(text: str) -> list[str]:
+    tokens = tokenize(text)
+    if not tokens:
+        return []
+    ranked = sorted(
+        assistant_help.TOPICS,
+        key=lambda t: score(tokens, t.terms),
+        reverse=True,
+    )
+    return [f"{t.title}: {t.answer}" for t in ranked[:2]
+            if score(tokens, t.terms) > 0]
+
+
+def _data_notes(db: Session, user: User) -> list[str]:
+    today = date.today()
+    month_start = today.replace(day=1)
+    notes: list[str] = []
+
+    total, initialized = _account_balances(db, user)
+    notes.append(
+        f"Money: {len(initialized)} account(s) initialised, about "
+        f"{_major(total)} KES available across them."
+    )
+
+    def month_total(kind: str) -> int:
+        return db.scalar(
+            select(func.coalesce(func.sum(Transaction.amount_minor), 0)).where(
+                Transaction.user_id == user.id,
+                Transaction.type == kind,
+                Transaction.occurred_on >= month_start,
+                Transaction.occurred_on <= today,
+            )
+        ) or 0
+
+    notes.append(
+        f"This month so far: about {_major(month_total('income'))} KES income and "
+        f"{_major(month_total('expense'))} KES in expenses."
+    )
+
+    goals = db.scalars(
+        select(Goal).where(Goal.user_id == user.id, Goal.status == "active")
+    ).all()
+    if goals:
+        listing = "; ".join(f"{g.name} (priority {g.priority})" for g in goals[:6])
+        notes.append(f"Active goals ({len(goals)}): {listing}.")
+    else:
+        notes.append("Active goals: none recorded yet.")
+
+    _rows, _pn, _est, _up, total_items = _shortage_rows(db, user, None)
+    notes.append(
+        f"Inventory: {total_items} item(s) tracked, {len(_rows)} below their "
+        f"target."
+    )
+
+    fees = db.scalars(
+        select(FeeObligation).where(
+            FeeObligation.user_id == user.id, FeeObligation.deleted_at.is_(None)
+        )
+    ).all()
+    open_fees = sum(1 for f in fees if (f.amount_due_minor - f.amount_paid_minor) > 0)
+    notes.append(f"Fee obligations still owing: {open_fees}.")
+    return notes
+
+
+def _build_context(db: Session, user: User, text: str) -> str:
+    parts: list[str] = ["Application help:"]
+    parts += [f"- {n}" for n in _help_notes(text)] or ["- (none matched)"]
+    parts.append("The user's saved records (approximate, today):")
+    parts += [f"- {n}" for n in _data_notes(db, user)]
+    return "\n".join(parts)
+
+
+def _model_assisted(db: Session, user: User, text: str) -> dict | None:
+    """Let a loaded model answer from retrieved project context, or None.
+
+    None means 'no model ready' or 'the answer broke the honesty guard', in
+    which case the caller keeps the deterministic guidance fallback.
+    """
+    if not llm.is_ready():
+        return None
+    context = _build_context(db, user, text)
+    ans = llm.answer(context, text)
+    if not ans:
+        return None
+    return {"content": ans, "cards": [], "proposal": None}
 
 
 # --- helpers ----------------------------------------------------------------
@@ -443,24 +578,44 @@ def _run_tool(db: Session, user: User, text: str, intent: str) -> dict:
 
 
 def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
-    """Answer a turn.
+    """Answer a turn, grounded on saved records and the built-in help.
 
-    Routing prefers the local LLM's intent classification only while the user
-    has loaded it from the AI page, and otherwise falls back to the
-    deterministic keyword detector; image turns always go straight to the image
-    tool. Every figure comes from the grounded tools below; the LLM may only
-    reword the summary prose (and never add a number), so enabling it cannot
-    fabricate data or bypass permissions.
+    Image turns go straight to the image tool. Otherwise the message is scored
+    against the data concepts and the app-help knowledge base: an explicit
+    "how do I use the app" question prefers a help topic, a data question runs
+    its read-tool, and anything unclear falls back to a transparent guide.
+
+    When the user has loaded the optional local model it strengthens this flow
+    without ever owning a figure: it may pick a more accurate data intent and
+    reword a read-tool's summary (rejected if it introduces a new number), and
+    it answers genuinely unmatched questions from retrieved project context
+    (help topics + the user's own records). If no model is loaded, or an answer
+    fails the honesty guard, the deterministic router answers - so every figure
+    still comes only from the grounded read-tools and nothing is fabricated.
     """
-    from app.services import llm
-
     if asset_id is not None:
         return _tool_image(db, user, asset_id)
 
-    intent = llm.classify_intent(text) or _detect_intent(text, False)
-    result = _run_tool(db, user, text, intent)
+    intent = _detect_intent(text, False)
+    model_ready = llm.is_ready()
+    if model_ready:
+        chosen = llm.classify_intent(text)
+        if chosen and chosen != "help":
+            intent = chosen
+    topic = assistant_help.match(text)
 
-    polished = llm.rephrase(result["content"])
-    if polished:
-        result["content"] = polished
-    return result
+    if _is_howto(text) and topic is not None:
+        return _tool_apphelp(topic)
+    if intent != "help":
+        result = _run_tool(db, user, text, intent)
+        if model_ready:
+            reworded = llm.rephrase(result["content"])
+            if reworded:
+                result = {**result, "content": reworded}
+        return result
+    if topic is not None:
+        return _tool_apphelp(topic)
+    assisted = _model_assisted(db, user, text)
+    if assisted is not None:
+        return assisted
+    return _tool_help(user)

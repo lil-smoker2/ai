@@ -39,7 +39,8 @@ SUGGESTED_PROMPTS = [
     "Which goals should I prioritize?",
     "What fees and obligations are due soon?",
     "Turn my goals into weekly tasks.",
-    "Find the most affordable way to complete my kitchen.",
+    "How do I add an expense?",
+    "How do I track my course fees?",
 ]
 
 
@@ -48,7 +49,8 @@ def suggestions():
     return SUGGESTED_PROMPTS
 
 
-# --- Optional local model ---------------------------------------------------
+# --- Optional local model -------------------------------------------------
+
 # The GGUF is deliberately never loaded at startup: the AI page asks for these
 # endpoints. Loading happens in a background thread, so the caller polls
 # GET /model until the state settles at "ready" or "failed".

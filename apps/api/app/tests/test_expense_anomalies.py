@@ -46,6 +46,13 @@ def _typical_day(client, headers, account_id, category="Food"):
         _spend(client, headers, account_id, 10000, category=category, days_ago=i + 1)
 
 
+def _spread_day(client, headers, account_id, category="Food"):
+    """A week around the same lunch that varies a little - median 10000, MAD
+    1000 - so there is real spread for a lone big expense to stand out from."""
+    for amt, i in [(9000, 1), (11000, 2), (9000, 3), (10000, 4), (10000, 5)]:
+        _spend(client, headers, account_id, amt, category=category, days_ago=i)
+
+
 # --- silence: no dependable middle, no verdict -------------------------------
 
 def test_a_fresh_account_reports_nothing(client, auth_headers):
@@ -103,7 +110,7 @@ def test_income_and_transfers_are_not_spending(client, auth_headers):
 
 def test_a_reversed_expense_withdraws_its_claim(client, auth_headers):
     account = _account(client, auth_headers)
-    _typical_day(client, auth_headers, account)
+    _spread_day(client, auth_headers, account)
     big = _spend(client, auth_headers, account, 200000, days_ago=0)
     assert len(_anomalies(client, auth_headers)["anomalies"]) == 1
     # Correcting the record takes the outlier out of the population too.
@@ -115,7 +122,7 @@ def test_a_reversed_expense_withdraws_its_claim(client, auth_headers):
 
 def test_one_big_expense_against_a_spread_history_is_flagged(client, auth_headers):
     account = _account(client, auth_headers)
-    _typical_day(client, auth_headers, account)                 # five at 10000
+    _spread_day(client, auth_headers, account)                  # five around 10000
     _spend(client, auth_headers, account, 15000, days_ago=6)    # one small deviation
     _spend(client, auth_headers, account, 200000, days_ago=0)   # the outlier
     # median 10000, MAD 1000 -> z = 0.6745 * 190000 / 1000
@@ -130,10 +137,10 @@ def test_one_big_expense_against_a_spread_history_is_flagged(client, auth_header
 def test_categories_are_merged_regardless_of_spelling(client, auth_headers):
     account = _account(client, auth_headers)
     _spend(client, auth_headers, account, 10000, category="Transport", days_ago=1)
-    _spend(client, auth_headers, account, 10000, category="transport", days_ago=2)
-    _spend(client, auth_headers, account, 10000, category="TRANSPORT", days_ago=3)
-    _spend(client, auth_headers, account, 15000, category="Transport", days_ago=4)
-    _spend(client, auth_headers, account, 10000, category=" Transport ", days_ago=5)
+    _spend(client, auth_headers, account, 9000, category="transport", days_ago=2)
+    _spend(client, auth_headers, account, 11000, category="TRANSPORT", days_ago=3)
+    _spend(client, auth_headers, account, 10000, category="Transport", days_ago=4)
+    _spend(client, auth_headers, account, 15000, category=" Transport ", days_ago=5)
     _spend(client, auth_headers, account, 200000, category="transport", days_ago=0)
     body = _anomalies(client, auth_headers)["anomalies"]
     # One category, one flag - and it is not split into thin sub-groups.

@@ -134,14 +134,23 @@ function ModelBar({
         </span>
         <strong>Local language model</strong>
         <span className="muted">
-          {status.model_file ? `${status.model_file}${size}` : "no model file found"}
+          {status.model_file ? (
+            <>
+              <span className="model-file">{status.model_file}</span>
+              {size ? ` ${size}` : ""}
+            </>
+          ) : (
+            "no model file found"
+          )}
         </span>
       </div>
 
       <p className="muted">
         Off until you load it — the app never starts this model by itself. When
-        it is loaded it only picks which tool to run and rewords the summary;
-        every number still comes from your saved records, and a rephrase that
+        it is loaded it helps the on-device router: it can pick which tool to
+        run, reword a summary, and answer questions the router would otherwise
+        miss - always grounded on your own saved records and the built-in help.
+        Every number still comes from your records, and any reply that
         introduces a new figure is rejected. Unload frees the memory again.
       </p>
 

@@ -33,6 +33,16 @@ def _blocks(size=120):
     return img
 
 
+def _diagonal(size=120):
+    """A third structure, far from both the horizontal ramp and the blocks - a
+    genuine one-off that belongs to no family."""
+    img = Image.new("L", (size, size))
+    for x in range(size):
+        for y in range(size):
+            img.putpixel((x, y), int(255 * (x + y) / (2 * (size - 1))))
+    return img
+
+
 def _save(directory: Path, name: str, img, fmt=None) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / name
@@ -77,8 +87,7 @@ def _write_library(root: Path):
     _save(root / "clothing" / "shirts", "big_version.png", grad.resize((300, 300)))
     _save(root / "household" / "plates", "patternA.png", _blocks())
     _save(root / "household" / "plates", "patternB.png", _blocks().resize((240, 240)))
-    _save(root / "food" / "fruits", "lonely.png", _gradient(90).transpose(
-        Image.ROTATE_90))
+    _save(root / "food" / "fruits", "lonely.png", _diagonal())
 
 
 def _scan(client, auth_headers):

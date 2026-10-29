@@ -156,6 +156,17 @@ rm ~/.local/bin/lifesmart ~/.local/share/applications/lifesmart.desktop
 | `ASSISTANT_LLM_ENABLED` | Offer the optional local Qwen `*.gguf` on the AI page; it is loaded only when you press Load, never at startup | `false` (offered in the desktop app) |
 | `ASSISTANT_MODEL_PATH` | Preferred `*.gguf` (relative to repo root, or absolute) | empty → `models/`, then `ai model/` |
 
+The AI Assistant runs on-device with a deterministic natural-language router (a
+stopworded, stem-tokenising scorer) plus a built-in knowledge base of "how do I
+use the app" answers, so it works on any device with nothing to download: it
+replies only from your saved records and its app help, never invents a figure,
+and any change it proposes waits for your confirmation. Optionally, pressing
+**Load** on the AI page puts a local Qwen `*.gguf` (via llama.cpp) into memory
+for that session; it can sharpen the intent, reword a summary and answer
+questions the router does not cover - strictly grounded on your own records and
+the built-in help, and any reply that introduces a new figure is rejected. It is
+never loaded at startup and unloading frees the RAM again.
+
 Money is stored as integer minor units everywhere; balances are only meaningful
 once an account is initialized (unknown is never shown as zero), and transfers
 are never counted as income or expenses.

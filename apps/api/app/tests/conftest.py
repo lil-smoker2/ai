@@ -12,7 +12,8 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_tmpdir}/test.db"
 os.environ["SECRET_KEY"] = "test-secret-key-not-for-production"
 os.environ["ASSETS_ROOT"] = os.path.join(_tmpdir, "assets")
 os.environ["GOOGLE_CLIENT_ID"] = "test-client.apps.googleusercontent.com"
-# Keep the assistant fully deterministic in tests: never load a local LLM.
+# Keep the assistant deterministic in tests: the optional local LLM is never
+# offered or loaded, so no turn can depend on llama.cpp being installed.
 os.environ["ASSISTANT_LLM_ENABLED"] = "false"
 
 import pytest  # noqa: E402

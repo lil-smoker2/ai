@@ -54,7 +54,9 @@ def test_a_lone_recorded_day_shows_no_trend(client, auth_headers):
 
 
 def test_two_days_are_still_not_a_reading(client, auth_headers):
-    trend = _trend_of(client, auth_headers, [(2, 100000), (1, 200000)])
+    # Two recorded days, one of them today so the page's own "record today on
+    # first look" adds nothing: two known days is below MIN_KNOWN_DAYS.
+    trend = _trend_of(client, auth_headers, [(1, 100000), (0, 200000)])
     assert trend is None
 
 
@@ -100,7 +102,7 @@ def test_the_moving_average_covers_the_four_most_recent_days(client, auth_header
 
 def test_unknown_days_are_gaps_and_stay_out_of_the_math(client, auth_headers):
     trend = _trend_of(client, auth_headers,
-                      [(3, 100000), (2, None), (1, 150000), (0, 200000)])
+                      [(3, 100000), (2, 150000), (1, 200000), (0, None)])
     assert trend["known_days"] == 3
     assert trend["gap_days"] == 1
     # Read only from the known days: still a 50000/day slope, and the gap did

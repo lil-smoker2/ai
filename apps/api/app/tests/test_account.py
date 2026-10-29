@@ -106,8 +106,8 @@ def test_integrations_state_what_does_not_work(client, auth_headers):
     # You record prices and categories; the app fetches neither.
     assert by_key["price_sourcing"]["status"] == "manual"
     assert by_key["image_classification"]["status"] == "manual"
-    # The local model is switched off in tests, so it must not claim to be up.
-    assert by_key["local_model"]["status"] != "available"
+    # The assistant runs on-device with a deterministic router, always available.
+    assert by_key["assistant"]["status"] == "available"
     assert by_key["google_signin"]["status"] == "available"
 
 

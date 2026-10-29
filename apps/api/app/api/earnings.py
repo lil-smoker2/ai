@@ -470,7 +470,7 @@ def project_vehicle(vehicle_id: int, body: ProjectionCreate,
         else ""
     )
     assumptions = [
-        f"Uses the {rate}% a year you recorded{checked}. LifeSmart is offline "
+        f"Uses the {rate.normalize():f}% a year you recorded{checked}. LifeSmart is offline "
         f"and did not verify it, and platforms change rates without telling you.",
         "Interest is not treated as earning more interest, so a platform that "
         "compounds monthly may pay a little more than this figure.",

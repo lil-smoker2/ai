@@ -63,9 +63,12 @@ def test_category_label_matches_a_nested_folder_segment(client, auth_headers,
                                                         assets_root):
     """The inventory UI sends a short slug ("trousers") while assets are filed
     by folder path ("clothing/trousers"), so the slug must resolve at depth."""
-    _make_image(assets_root / "clothing" / "trousers" / "chino.jpg")
-    _make_image(assets_root / "clothing" / "jeans" / "denim.jpg")
-    _make_image(assets_root / "household" / "cups" / "mug.png", fmt="PNG")
+    _make_image(assets_root / "clothing" / "trousers" / "chino.jpg",
+                color=(200, 30, 30))
+    _make_image(assets_root / "clothing" / "jeans" / "denim.jpg",
+                color=(30, 200, 30))
+    _make_image(assets_root / "household" / "cups" / "mug.png", fmt="PNG",
+                color=(30, 30, 200))
     client.post("/api/assets/scan", json={}, headers=auth_headers)
 
     def categories(label):

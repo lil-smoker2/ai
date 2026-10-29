@@ -108,3 +108,48 @@ def test_rephrase_acceptable_rejects_invented_number():
 def test_rephrase_acceptable_rejects_empty():
     assert llm.rephrase_acceptable("anything", "") is False
     assert llm.rephrase_acceptable("anything", None) is False
+
+
+def test_answer_noop_when_unavailable():
+    # With the LLM off, free-form answering defers to the deterministic fallback.
+    assert llm.answer("REFERENCE NOTES: money help", "how do I add an expense?") is None
+
+
+def test_answer_never_loads_the_model():
+    # Like classify/rephrase, answering a turn must not implicitly put a model
+    # into memory.
+    llm.answer("some context 30,000", "what did I save?")
+    assert llm._model is None
+    assert llm._state == llm.STATE_UNLOADED
+    assert llm.is_ready() is False
+
+
+def test_answer_acceptable_reuses_context_numbers():
+    context = "You have 2 active goals and saved 30,000."
+    assert llm.answer_acceptable(
+        context, "how am I doing?", "You've saved 30,000 across 2 goals."
+    ) is True
+
+
+def test_answer_acceptable_rejects_invented_number():
+    context = "You have 2 active goals and saved 30,000."
+    # The model hallucinated a figure that was never in the notes.
+    assert llm.answer_acceptable(
+        context, "how am I doing?", "You've saved 35,000 across 2 goals."
+    ) is False
+
+
+def test_answer_acceptable_allows_numbered_steps():
+    # A grounded how-to may enumerate steps; small counts are not figures, so
+    # they are not treated as invented amounts.
+    context = "Adding an expense: Open Money and record a transaction."
+    assert llm.answer_acceptable(
+        context,
+        "how do I log spending?",
+        "1. Open Money.\n2. Add a transaction.\n3. Pick a category.",
+    ) is True
+
+
+def test_answer_acceptable_rejects_empty():
+    assert llm.answer_acceptable("context", "q", "") is False
+    assert llm.answer_acceptable("context", "q", None) is False

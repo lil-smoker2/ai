@@ -99,7 +99,8 @@ def test_date_and_category_filters(client, auth_headers):
 
 def test_account_filter_scopes_balance_and_flow(client, auth_headers):
     cash = _account(client, auth_headers, "Cash", balance=10000)
-    bank = _account(client, auth_headers, "Bank", "bank", balance=500000)
+    bank = _account(client, auth_headers, "Bank", "bank", balance=500000,
+                    bank_name="Equity Bank", account_number="0110045678")
     _txn(client, auth_headers, type="expense", amount_minor=6000, account_id=cash["id"])
     _txn(client, auth_headers, type="expense", amount_minor=70000, account_id=bank["id"])
 

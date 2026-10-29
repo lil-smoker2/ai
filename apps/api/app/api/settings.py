@@ -44,12 +44,28 @@ EXPORT_NOTE = (
 )
 
 
+def _assistant_integration() -> dict:
+    return {
+        "key": "assistant", "label": "AI Assistant",
+        "status": "available",
+        "detail": (
+            "The assistant runs entirely on this machine with a deterministic, "
+            "on-device language router, so it works on any device even with no "
+            "model loaded. It answers from your saved records and from built-in "
+            "help about how to use the app, never invents a figure, and sends "
+            "nothing anywhere. Any change it suggests is a proposal you confirm "
+            "before it writes."
+        ),
+        "action": "AI Assistant",
+    }
+
+
 def _size_text(size_mb: float | None) -> str:
     return f" ({size_mb:.0f} MB)" if size_mb else ""
 
 
 def _model_integration(st: dict) -> dict:
-    """Map the model lifecycle onto an honest status label."""
+    """Map the optional model lifecycle onto an honest status label."""
     name = st["model_file"] or "no model file"
     state = st["state"]
     if state == "ready":
@@ -57,9 +73,11 @@ def _model_integration(st: dict) -> dict:
             "key": "local_model", "label": "On-device AI model",
             "status": "available",
             "detail": (
-                f"{name}{_size_text(st['size_mb'])} is loaded and answering on "
-                "the AI page. It only rephrases figures the app calculated "
-                "itself; it cannot write to your records."
+                f"{name}{_size_text(st['size_mb'])} is loaded and helping on "
+                "the AI page: it can reword a summary and answer questions the "
+                "router does not cover, but only from your own saved records and "
+                "built-in help - an answer that introduces a new figure is "
+                "rejected, and it cannot write to your records."
             ),
             "action": "AI Assistant > Unload model",
         }
@@ -76,8 +94,8 @@ def _model_integration(st: dict) -> dict:
             "status": "on_demand",
             "detail": (
                 f"{name}{_size_text(st['size_mb'])} is on this machine but not "
-                "in memory. Press Load when you want it; Unload frees the RAM "
-                "again. The assistant works without it."
+                "in memory. Press Load when you want it to help answer; Unload "
+                "frees the RAM again. The assistant works fully without it."
             ),
             "action": "AI Assistant > Load model",
         }
@@ -87,9 +105,10 @@ def _model_integration(st: dict) -> dict:
         "status": "unavailable",
         "detail": (
             f"No on-device model is running here: {reason}. The assistant "
-            "answers with its own keyword routing, which never invents data."
+            "answers with its own deterministic routing, which never invents "
+            "data."
         ),
-        "action": "AI Assistant",
+        "action": ".env: ASSISTANT_LLM_ENABLED",
     }
 
 
@@ -118,6 +137,7 @@ def integrations(settings: Settings) -> list[dict]:
         google["action"] = ".env: GOOGLE_CLIENT_ID"
 
     return [
+        _assistant_integration(),
         _model_integration(st),
         google,
         {

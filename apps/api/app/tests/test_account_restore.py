@@ -563,11 +563,12 @@ def test_the_preview_says_what_would_be_lost(client, auth_headers):
 
 
 def test_an_archive_holding_nothing_is_named_as_one(client, auth_headers):
-    """Emptying the account is what this would do, and it should not arrive
-    dressed up as a restore."""
-    client.get("/api/notifications/preferences", headers=auth_headers)
-    archive = _archive(client, auth_headers)
-    client.post("/api/account/reset", json={"confirm": "RESET"}, headers=auth_headers)
+    """An archive whose every table is empty is what restoring nothing looks
+    like, and it should not arrive dressed up as a restore."""
+    payload = _payload(client, auth_headers)
+    for key in payload["tables"]:
+        payload["tables"][key] = []
+    archive = _zip_bytes(payload)
     client.post("/api/tasks", json={"title": "Buy charcoal"}, headers=auth_headers)
 
     body = _preview(client, auth_headers, archive).json()
