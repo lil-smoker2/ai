@@ -308,4 +308,21 @@ describe("SettingsPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText(/account sign-in/)).toBeInTheDocument();
   });
+
+  it("lets the user pick a colour theme and remembers it on the device", async () => {
+    // The theme is a local display preference: choosing it must persist to
+    // localStorage and repaint the document, without a request to the server.
+    window.localStorage.removeItem("lifesmart.theme");
+    renderPage();
+
+    const dark = await screen.findByRole("button", { name: /Dark/ });
+    fireEvent.click(dark);
+    expect(window.localStorage.getItem("lifesmart.theme")).toBe("dark");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(dark).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: /Light/ }));
+    expect(window.localStorage.getItem("lifesmart.theme")).toBe("light");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  });
 });

@@ -24,14 +24,23 @@ import {
   Database,
   Download,
   HardDrive,
+  Monitor,
+  Moon,
   Plug,
   ShieldCheck,
+  Sun,
   Trash2,
   TriangleAlert,
   User,
 } from "lucide-react";
 import { api, downloadFile } from "../services/api";
 import { RestoreCard } from "../features/account/RestoreCard";
+import {
+  THEME_MODES,
+  getStoredMode,
+  saveMode,
+  type ThemeMode,
+} from "../lib/theme";
 import type {
   IntegrationStatus,
   ResetResult,
@@ -95,6 +104,9 @@ export function SettingsPage() {
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [confirmWord, setConfirmWord] = useState("");
   const [resetResult, setResetResult] = useState<ResetResult | null>(null);
+  // The theme is a device-local display preference, so it lives in localStorage
+  // rather than the profile the server owns. Reflect the stored choice here.
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getStoredMode());
 
   const settings = useQuery({
     queryKey: ["settings"],
@@ -266,6 +278,37 @@ export function SettingsPage() {
         </button>
       </form>
 
+      {/* --- Appearance --- */}
+      <div className="card">
+        <h2>
+          <Sun size={16} aria-hidden /> Appearance
+        </h2>
+        <p className="muted">
+          Pick light or dark, or let LifeSmart follow this device's own setting.
+          The choice is saved on this device only - it is how the app looks, not
+          a record of your data.
+        </p>
+        <div className="theme-toggle" role="group" aria-label="Colour theme">
+          {THEME_MODES.map(({ value, label }) => {
+            const Icon = value === "light" ? Sun : value === "dark" ? Moon : Monitor;
+            return (
+              <button
+                key={value}
+                type="button"
+                className={`btn theme-option${themeMode === value ? " active" : ""}`}
+                aria-pressed={themeMode === value}
+                onClick={() => {
+                  saveMode(value);
+                  setThemeMode(value);
+                }}
+              >
+                <Icon size={16} aria-hidden /> {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* --- Reminders --- */}
       <div className="card">
         <h2>
@@ -319,8 +362,8 @@ export function SettingsPage() {
           </div>
         ))}
         <p className="muted">
-          Not built yet, so not shown as a choice: appearance and language
-          settings, cloud sync, and a password to reset.
+          Not built yet, so not shown as a choice: language settings, cloud sync,
+          and a password to reset.
         </p>
       </div>
 

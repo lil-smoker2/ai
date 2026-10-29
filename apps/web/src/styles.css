@@ -1,20 +1,62 @@
 :root {
   --brand: #16a34a;
   --brand-dark: #15803d;
+  --brand-light: #22c55e;
   --bg: #f6f8f7;
   --surface: #ffffff;
+  --surface-alt: #eef2f0;
   --text: #1a201c;
   --muted: #5f6b64;
   --border: #e2e8e4;
+  --hover-bg: #eef2f0;
+  --nav-active-bg: #e7f6ec;
   --danger: #dc2626;
+  --danger-soft-bg: #fee2e2;
+  --danger-soft-border: #fecaca;
+  --danger-soft-text: #991b1b;
+  --success-bg: #dcfce7;
+  --success-text: #15803d;
+  --info-bg: #e0e7ff;
+  --info-text: #3730a3;
   --warn: #b45309;
   --warn-bg: #fef3c7;
+  --warn-strong-text: #92400e;
   --radius: 12px;
   --sidebar-w: 240px;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   /* How much of --bg is painted over a section's background picture. Text
      never sits on the picture itself, but headings do sit on this wash. */
   --page-bg-wash: rgba(246, 248, 247, 0.78);
+}
+
+/* Dark theme. The whole app reads colour from the tokens above, so overriding
+   them here recolours every surface, button, badge and form control at once.
+   lib/theme.ts sets this attribute from the user's choice (or the OS). */
+[data-theme="dark"] {
+  --brand: #22c55e;
+  --brand-dark: #16a34a;
+  --brand-light: #4ade80;
+  --bg: #0e1512;
+  --surface: #17211d;
+  --surface-alt: #232f29;
+  --text: #e7efe9;
+  --muted: #98a89f;
+  --border: #2c3a33;
+  --hover-bg: #232f29;
+  --nav-active-bg: #1e3327;
+  --danger: #f87171;
+  --danger-soft-bg: #3a1a1a;
+  --danger-soft-border: #5b2626;
+  --danger-soft-text: #fca5a5;
+  --success-bg: #16351f;
+  --success-text: #4ade80;
+  --info-bg: #1e2440;
+  --info-text: #a5b4fc;
+  --warn: #fbbf24;
+  --warn-bg: #3a2f12;
+  --warn-strong-text: #fcd34d;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --page-bg-wash: rgba(14, 21, 18, 0.82);
 }
 
 * {
@@ -27,6 +69,7 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 h1 {
@@ -61,23 +104,42 @@ h2 {
   background: var(--surface);
   color: var(--text);
   font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
   text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.05s ease;
 }
 .btn:hover {
   border-color: var(--brand);
+  background: var(--surface-alt);
+  color: var(--brand-dark);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 .btn.primary {
-  background: var(--brand);
+  background: linear-gradient(180deg, var(--brand-light), var(--brand));
   border-color: var(--brand);
   color: #fff;
+  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.35);
 }
 .btn.primary:hover {
-  background: var(--brand-dark);
+  background: linear-gradient(180deg, var(--brand), var(--brand-dark));
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
 }
 .btn.ghost {
   background: transparent;
   border-color: transparent;
+  color: var(--brand-dark);
+}
+.btn.ghost:hover {
+  background: var(--nav-active-bg);
   color: var(--brand-dark);
 }
 .btn.small {
@@ -87,6 +149,7 @@ h2 {
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
 }
 .btn-row {
   display: flex;
@@ -106,10 +169,14 @@ h2 {
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
+  color: var(--muted);
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .icon-btn:hover {
   border-color: var(--brand);
+  background: var(--surface-alt);
+  color: var(--brand-dark);
 }
 
 /* --- Cards & grids --- */
@@ -203,9 +270,9 @@ select:focus {
   margin-top: 0;
 }
 .error-banner {
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--danger-soft-bg);
+  border: 1px solid var(--danger-soft-border);
+  color: var(--danger-soft-text);
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -258,7 +325,7 @@ select:focus {
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
   font-size: 0.75rem;
-  background: #eef2f0;
+  background: var(--surface-alt);
   color: var(--muted);
   text-transform: capitalize;
 }
@@ -270,17 +337,17 @@ select:focus {
 .badge.active,
 .badge.completed,
 .badge.ok {
-  background: #dcfce7;
-  color: var(--brand-dark);
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 .badge.expense {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--danger-soft-bg);
+  color: var(--danger-soft-text);
 }
 .badge.transfer,
 .badge.paused {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--info-bg);
+  color: var(--info-text);
 }
 .badge.priority-critical,
 .badge.priority-high {
@@ -313,16 +380,16 @@ select:focus {
    savings goal behind its own pace is blue, and a plain "check this" stays the
    neutral badge colour. */
 .badge.overdue {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--danger-soft-bg);
+  color: var(--danger-soft-text);
 }
 .badge.due {
   background: var(--warn-bg);
   color: var(--warn);
 }
 .badge.soon {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--info-bg);
+  color: var(--info-text);
 }
 .nav-badge {
   margin-left: auto;
@@ -374,7 +441,7 @@ select:focus {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: #eef2f0;
+  background: var(--surface-alt);
   color: var(--muted);
 }
 
@@ -476,7 +543,7 @@ select:focus {
 .progress-track {
   height: 8px;
   border-radius: 999px;
-  background: #eef2f0;
+  background: var(--surface-alt);
   overflow: hidden;
   margin: 0.4rem 0;
 }
@@ -598,10 +665,10 @@ select:focus {
   text-align: left;
 }
 .nav-link:hover {
-  background: #eef2f0;
+  background: var(--hover-bg);
 }
 .nav-link.active {
-  background: #e7f6ec;
+  background: var(--nav-active-bg);
   color: var(--brand-dark);
   font-weight: 600;
 }
@@ -1088,7 +1155,7 @@ input[readonly] {
   margin-bottom: 0.35rem;
 }
 .danger-zone {
-  border-color: #fecaca;
+  border-color: var(--danger-soft-border);
 }
 .danger-zone h2 {
   color: var(--danger);
@@ -1110,6 +1177,23 @@ input[readonly] {
   margin-top: 0.75rem;
 }
 
+/* Appearance: a small segmented control for the light/dark/system choice. The
+   selected option takes the brand fill so the current theme is obvious. */
+.theme-toggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+.theme-option.active {
+  background: linear-gradient(180deg, var(--brand-light), var(--brand));
+  border-color: var(--brand);
+  color: #fff;
+}
+.theme-option.active:hover {
+  color: #fff;
+}
+
 /* --- Settings: bring a backup back --- */
 .restore-pick {
   display: flex;
@@ -1128,7 +1212,7 @@ input[readonly] {
 .restore-warnings {
   margin: 0.5rem 0;
   padding-left: 1.1rem;
-  color: #92400e;
+  color: var(--warn-strong-text);
   font-size: 0.85rem;
 }
 .restore-warnings li {
