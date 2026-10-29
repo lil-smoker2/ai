@@ -57,6 +57,33 @@ export interface ItemPage {
   page: Page;
 }
 
+// --- Inventory forecasting ---
+export type ForecastConfidence = "steady" | "limited";
+
+export interface InventoryForecast {
+  item_id: number;
+  name: string;
+  category_name: string | null;
+  unit: string | null;
+  quantity_owned: number;
+  target_quantity: number | null;
+  shortage: number;
+  consumption_per_day: number;
+  consumption_events: number;
+  window_days: number;
+  days_to_zero: number;
+  runout_on: string;
+  restock_soon: boolean;
+  estimated_refill_cost_minor: number | null;
+  confidence: ForecastConfidence;
+}
+
+export interface InventoryForecasts {
+  generated_on: string;
+  currency: string;
+  forecasts: InventoryForecast[];
+}
+
 // --- Money ---
 export type AccountType =
   | "cash"
@@ -118,6 +145,26 @@ export interface MonthSummary {
   transfers_minor: number;
 }
 
+/** One expense standing out against its own category's recorded median.
+ * Categories too thin to have a dependable middle report nothing at all. */
+export interface ExpenseAnomaly {
+  transaction_id: number;
+  description: string | null;
+  category: string;
+  amount_minor: number;
+  currency: string;
+  occurred_on: string;
+  category_median_minor: number;
+  deviation_score: number;
+}
+
+export interface ExpenseAnomalies {
+  generated_on: string;
+  window_days: number;
+  min_category_expenses: number;
+  anomalies: ExpenseAnomaly[];
+}
+
 // --- Goals ---
 export type GoalType = "money" | "quantity" | "obligation" | "custom";
 export type GoalStatus = "active" | "paused" | "completed";
@@ -144,6 +191,18 @@ export interface Goal {
   estimated_remaining_cost_minor: number | null;
   required_monthly_saving_minor: number | null;
   deadline_state: "ok" | "no_deadline" | "deadline_passed";
+  projection: GoalProjection | null;
+}
+
+/** Completion pace read from recorded contributions. Null when the history
+ * does not show recent saving - the backend never guesses a date. */
+export interface GoalProjection {
+  amount_per_day_minor: number;
+  contribution_count: number;
+  window_days: number;
+  days_to_target: number;
+  projected_on: string;
+  status: "on_track" | "after_deadline" | "no_deadline";
 }
 
 export interface Contribution {
@@ -353,6 +412,27 @@ export interface AssetPage {
   page: Page;
 }
 
+/** One member of a near-duplicate group - only identity and the sanitized
+ * category travel, never a server filesystem path. */
+export interface SimilarAssetRef {
+  id: string;
+  original_filename: string;
+  category: string;
+}
+
+export interface SimilarGroup {
+  members: SimilarAssetRef[];
+}
+
+/** Groups of two or more *different* files that look alike. The exact copies are
+ * already folded to one active asset by the content hash, so a group here is the
+ * same shot re-saved, resized or lightly edited. Empty means nothing looks alike. */
+export interface SimilarAssets {
+  threshold: number;
+  hash_bits: number;
+  groups: SimilarGroup[];
+}
+
 export interface ScanStatus {
   state: "idle" | "running" | "completed" | "failed";
   started_at: string | null;
@@ -406,6 +486,16 @@ export interface Task {
   created_at: string;
   completed_at: string | null;
   is_overdue: boolean;
+  urgency: TaskUrgency;
+}
+
+/** A task's pressiveness, derived on each read from priority + due date.
+ * The two weights that make up the score travel with it. */
+export interface TaskUrgency {
+  score: number;
+  band: "overdue" | "due-soon" | "scheduled" | "unscheduled" | "settled";
+  priority_points: number;
+  overdue_points: number;
 }
 
 // --- Student Life ---
@@ -704,6 +794,19 @@ export interface NetWorthSaved {
   updated_at: string;
 }
 
+/** Direction read off the saved snapshots. Null until at least three
+ * complete days exist - the backend never draws a line through gaps. */
+export interface NetWorthTrend {
+  from_date: string;
+  to_date: string;
+  known_days: number;
+  gap_days: number;
+  slope_minor_per_day: number;
+  change_minor: number;
+  recent_average_minor: number;
+  direction: "building" | "steady" | "declining";
+}
+
 export interface Valuation {
   currency: string;
   lines: ValuationLine[];
@@ -718,6 +821,7 @@ export interface Valuation {
   replacement_total_minor: number | null;
   saved: NetWorthSaved | null;
   history: NetWorthSaved[];
+  trend: NetWorthTrend | null;
   note: string;
 }
 

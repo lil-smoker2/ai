@@ -22,6 +22,7 @@ from app.models.inventory import InventoryCategory, InventoryItem
 from app.models.user import User
 from app.models.valuation import NetWorthSnapshot
 from app.schemas.valuation import NetWorthSaved, Valuation, ValuationLine
+from app.services import trend as trend_service
 from app.services.asset_scanner import category_match
 
 HISTORY_LIMIT = 12
@@ -261,5 +262,7 @@ def valuation(db: Session, user: User) -> Valuation:
         replacement_total_minor=s.replacement_total_minor,
         saved=_out(snapshot),
         history=[_out(row) for row in history],
+        # Reads the same snapshots the table shows; None when they are too few.
+        trend=trend_service.describe(db, user),
         note=NOTE,
     )

@@ -138,6 +138,14 @@ function mockFetch(initial: Account[]) {
     if (url.includes("/api/transactions/summary/month")) {
       return jsonResponse({ income_minor: 0, expense_minor: 0, transfers_minor: 0 });
     }
+    if (url.includes("/api/transactions/anomalies")) {
+      return jsonResponse({
+        generated_on: "2026-10-28",
+        window_days: 90,
+        min_category_expenses: 5,
+        anomalies: [],
+      });
+    }
     if (url.includes("/api/transactions")) {
       return method === "POST"
         ? jsonResponse({ id: 500, ...body })

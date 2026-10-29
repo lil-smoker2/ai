@@ -6,9 +6,11 @@ import { Plus, Minus } from "lucide-react";
 import { api } from "../services/api";
 import { shortageLabel } from "../lib/money";
 import { AssetImage } from "../features/assets/AssetImage";
+import { ForecastPanel } from "../features/inventory/ForecastPanel";
 import type {
   InventoryCategory,
   InventoryItem,
+  InventoryForecasts,
   ItemPage,
   ScanStatus,
 } from "../types/api";
@@ -44,6 +46,12 @@ export function InventoryPage() {
   const items = useQuery({
     queryKey: ["inventory-items"],
     queryFn: () => api<ItemPage>("/api/inventory/items"),
+  });
+  // Run-out projections ride on the same history the +/- buttons write, so a
+  // quantity change refreshes them alongside the list.
+  const forecasts = useQuery({
+    queryKey: ["inventory-forecasts"],
+    queryFn: () => api<InventoryForecasts>("/api/inventory/forecasts"),
   });
 
   const { register, handleSubmit, reset, watch } = useForm<NewItemForm>({
@@ -81,6 +89,7 @@ export function InventoryPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-forecasts"] });
       reset();
       setShowForm(false);
       setFormError(null);
@@ -93,8 +102,10 @@ export function InventoryPage() {
       api<InventoryItem>(`/api/inventory/items/${id}/adjust-quantity`, {
         body: { change },
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["inventory-items"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-forecasts"] });
+    },
     onError: (e) => setFormError(e.message),
   });
 
@@ -135,6 +146,8 @@ export function InventoryPage() {
         </button>
         {scanMsg && <p className="muted">{scanMsg}</p>}
       </div>
+
+      {forecasts.data && <ForecastPanel data={forecasts.data} />}
 
       {showForm && (
         <form

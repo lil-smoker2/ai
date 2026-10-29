@@ -29,6 +29,7 @@ const goal: Goal = {
   estimated_remaining_cost_minor: null,
   required_monthly_saving_minor: 755556,
   deadline_state: "ok",
+  projection: null,
 };
 
 function jsonResponse(body: unknown): Response {
@@ -68,6 +69,8 @@ describe("GoalsPage", () => {
     expect(screen.getByText(/KES 68,000\.00/)).toBeInTheDocument();
     // Required monthly saving comes straight from the backend calculation.
     expect(screen.getByText(/KES 7,555\.56 per month/)).toBeInTheDocument();
+    // No contribution history in the response means no projected date printed.
+    expect(screen.queryByText(/reached around/)).toBeNull();
   });
 
   it("shows an empty state when no goals exist", async () => {

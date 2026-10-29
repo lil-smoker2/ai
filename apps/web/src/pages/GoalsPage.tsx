@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
 import { api } from "../services/api";
 import { formatMinor } from "../lib/money";
+import { GoalProjectionLine } from "../features/goals/GoalProjectionLine";
 import type { Contribution, Goal, GoalPriority, GoalType } from "../types/api";
 
 const GOAL_TYPES: { value: GoalType; label: string }[] = [
@@ -250,6 +251,8 @@ export function GoalsPage() {
                   : `Deadline ${g.deadline}`
               : "No deadline set"}
           </p>
+
+          {g.projection && <GoalProjectionLine projection={g.projection} />}
 
           {g.status === "active" && (
             <div className="btn-row">

@@ -18,6 +18,7 @@ from app.models.goal import Goal, GoalContribution
 from app.models.inventory import InventoryItem
 from app.models.user import User
 from app.schemas.goals import ContributionCreate, ContributionOut, GoalCreate, GoalOut
+from app.services import forecasting as forecasting_service
 
 router = APIRouter(prefix="/api/goals", tags=["goals"])
 
@@ -65,6 +66,15 @@ def _goal_out(db: Session, goal: Goal) -> GoalOut:
         if target and months:
             # Round up so plans never under-fund the goal.
             out.required_monthly_saving_minor = -(-target // months)
+
+    # A completion date exists only where contributions show real recent
+    # saving; otherwise this stays None instead of an invented date.
+    target_left = out.remaining_amount_minor
+    if target_left is None and goal.type == "quantity" and goal.estimated_unit_cost_minor is not None:
+        target_left = out.estimated_remaining_cost_minor
+    out.projection = forecasting_service.project_goal_completion(
+        db, goal, target_left, today=today
+    )
     return out
 
 

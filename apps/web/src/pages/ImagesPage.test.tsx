@@ -57,6 +57,9 @@ function mockFetch() {
       return jsonResponse(["clothing/jeans", "household/plates"]);
     }
     if (url.includes("/thumbnail")) return jsonResponse({});
+    if (url.includes("/api/assets/similar")) {
+      return jsonResponse({ threshold: 10, hash_bits: 64, groups: [] });
+    }
     if (url.includes("/api/assets")) return jsonResponse(page);
     return jsonResponse({});
   }) as unknown as typeof fetch;

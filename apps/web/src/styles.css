@@ -268,7 +268,8 @@ select:focus {
 }
 .badge.income,
 .badge.active,
-.badge.completed {
+.badge.completed,
+.badge.ok {
   background: #dcfce7;
   color: var(--brand-dark);
 }
@@ -1221,6 +1222,140 @@ input[readonly] {
   margin: 0.25rem 0 0.75rem;
   padding-left: 1.1rem;
   font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Pictures that look alike - the perceptual near-duplicate section under the
+   gallery. A group reads as one row of members so the eye can compare them. */
+.similar-assets-wrap {
+  margin-top: 1.5rem;
+}
+.similar-assets h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.25rem;
+}
+.similar-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.similar-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.6rem 0.75rem;
+}
+.similar-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.similar-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+.similar-member {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  min-width: 0;
+}
+.similar-member strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.similar-note {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+}
+
+/* Curated reading list under "Places to save" - a directory of where to learn,
+   research and (by choice) put money. Static notes, not a record; each row
+   opens with <details> so the list stays short until you want it long. */
+.investment-guide h2 {
+  margin-bottom: 0.25rem;
+}
+.guide-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.55rem 0.7rem;
+  margin: 0.5rem 0;
+}
+.guide-item > summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+}
+.guide-item[open] > summary {
+  margin-bottom: 0.4rem;
+}
+.guide-tag {
+  font-size: 0.72rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.guide-summary {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.9rem;
+}
+.guide-heading {
+  margin: 0.6rem 0 0.2rem;
+  font-weight: 600;
+}
+.guide-list {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+  font-size: 0.88rem;
+}
+.guide-list li {
+  margin: 0.15rem 0;
+}
+.guide-benefit {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+.guide-caution {
+  font-size: 0.85rem;
+  color: var(--danger);
+  margin: 0.5rem 0 0;
+}
+.guide-example {
+  margin: 0.9rem 0 0.5rem;
+}
+.guide-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 26rem;
+  font-size: 0.85rem;
+}
+.guide-table th,
+.guide-table td {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+}
+.guide-table td.gain {
+  color: var(--brand-dark);
+}
+.guide-table td.loss {
+  color: var(--danger);
+}
+.guide-order {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 

@@ -17,6 +17,7 @@ from app.schemas.common import Page
 from app.schemas.inventory import (
     CategoryCreate,
     CategoryOut,
+    InventoryForecastsOut,
     ItemCreate,
     ItemOut,
     ItemPage,
@@ -24,6 +25,7 @@ from app.schemas.inventory import (
     QuantityAdjust,
     QuantityEventOut,
 )
+from app.services import forecasting as forecasting_service
 from app.services import valuation as valuation_service
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
@@ -88,6 +90,16 @@ def create_category(body: CategoryCreate, db: Session = Depends(get_db),
     db.add(category)
     db.commit()
     return category
+
+
+@router.get("/forecasts", response_model=InventoryForecastsOut)
+def replenishment_forecasts(db: Session = Depends(get_db),
+                           user: User = Depends(get_current_user)):
+    """Projected run-out dates for items with an observed consumption rate.
+
+    Not cached, deliberately: it is read from the same quantity events the rest
+    of the app writes, so adjusting a quantity changes the answer immediately."""
+    return forecasting_service.forecast_replenishment(db, user)
 
 
 @router.get("/items", response_model=ItemPage)

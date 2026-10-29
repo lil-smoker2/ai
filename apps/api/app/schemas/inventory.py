@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -96,3 +97,33 @@ class QuantityEventOut(BaseModel):
     reason: str
     transaction_id: int | None
     occurred_on: date
+
+
+class InventoryForecastOut(BaseModel):
+    """One item's projected run-out, derived from its consumption history.
+
+    days_to_zero / runout_on are absent nowhere: an item is only listed once a
+    rate has been observed, so both always carry a value. Money is minor units,
+    null when no price was recorded."""
+
+    item_id: int
+    name: str
+    category_name: str | None
+    unit: str | None
+    quantity_owned: int
+    target_quantity: int | None
+    shortage: int
+    consumption_per_day: float
+    consumption_events: int
+    window_days: int
+    days_to_zero: int
+    runout_on: date
+    restock_soon: bool
+    estimated_refill_cost_minor: int | None
+    confidence: Literal["steady", "limited"]
+
+
+class InventoryForecastsOut(BaseModel):
+    generated_on: date
+    currency: str
+    forecasts: list[InventoryForecastOut]

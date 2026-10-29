@@ -14,6 +14,7 @@ import { Gem, Package, RefreshCw } from "lucide-react";
 import { api } from "../services/api";
 import { formatMinor, shortageLabel } from "../lib/money";
 import { AssetImage } from "../features/assets/AssetImage";
+import { TrendSummary } from "../features/networth/TrendSummary";
 import type { Valuation, ValuationLine } from "../types/api";
 
 function formatDay(iso: string): string {
@@ -230,6 +231,7 @@ export function NetWorthPage() {
           {data.history.length > 1 && (
             <div className="card">
               <h2>Saved over time</h2>
+              {data.trend && <TrendSummary trend={data.trend} currency={currency} />}
               <table className="data-table">
                 <thead>
                   <tr>

@@ -27,6 +27,22 @@ class GoalCreate(BaseModel):
         return self
 
 
+class GoalProjection(BaseModel):
+    """Completion estimate read from the goal's own contribution history.
+
+    Absent (null) whenever the records do not show recent saving - no history
+    means no date, never a guessed one."""
+
+    amount_per_day_minor: int
+    contribution_count: int
+    window_days: int
+    days_to_target: int
+    projected_on: date
+    # "on_track" | "after_deadline" | "no_deadline" - compared against the
+    # user's own deadline, when they set one.
+    status: str
+
+
 class GoalOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -52,6 +68,8 @@ class GoalOut(BaseModel):
     required_monthly_saving_minor: int | None = None
     # "ok" | "no_deadline" | "deadline_passed" - never divide by zero.
     deadline_state: str = "no_deadline"
+    # Pace estimate from recorded contributions; None when there is no history.
+    projection: GoalProjection | None = None
 
 
 class ContributionCreate(BaseModel):

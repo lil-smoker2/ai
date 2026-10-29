@@ -16,6 +16,7 @@ import type { FieldErrors, UseFormReturn } from "react-hook-form";
 import { Plus } from "lucide-react";
 import { api } from "../services/api";
 import { formatMinor } from "../lib/money";
+import { InvestmentGuidePanel } from "../features/earnings/InvestmentGuidePanel";
 import type {
   BusinessProfit,
   BusinessRecord,
@@ -1288,6 +1289,8 @@ export function EarningsPage() {
               <Plus size={16} aria-hidden /> Add Place
             </button>
           </form>
+
+          <InvestmentGuidePanel />
         </>
       )}
     </div>

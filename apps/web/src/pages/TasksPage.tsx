@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { ListChecks, Plus } from "lucide-react";
 import { api } from "../services/api";
+import { UrgencyTag } from "../features/tasks/UrgencyTag";
 import type { Task, TaskPriority, TaskRecurrence, TaskStatus } from "../types/api";
 
 const STATUSES: TaskStatus[] = [
@@ -31,14 +32,18 @@ interface NewTaskForm {
 export function TasksPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<TaskStatus | "all">("all");
+  const [sortBy, setSortBy] = useState<"due" | "urgency">("due");
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const tasks = useQuery({
-    queryKey: ["tasks", filter],
+    queryKey: ["tasks", filter, sortBy],
     queryFn: () =>
       api<Task[]>("/api/tasks", {
-        params: filter === "all" ? {} : { status: filter },
+        params: {
+          ...(filter === "all" ? {} : { status: filter }),
+          ...(sortBy === "urgency" ? { sort: "urgency" } : {}),
+        },
       }),
   });
 
@@ -158,6 +163,17 @@ export function TasksPage() {
         </select>
       </label>
 
+      <label className="field-inline">
+        Order
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "due" | "urgency")}
+        >
+          <option value="due">By due date</option>
+          <option value="urgency">Most urgent first</option>
+        </select>
+      </label>
+
       {tasks.isPending && <p className="muted">Loading…</p>}
       {tasks.data?.length === 0 && (
         <div className="card empty-state">
@@ -177,7 +193,8 @@ export function TasksPage() {
               </span>
               <span>
                 <span className={`badge ${OPEN.has(t.status) ? "" : "income"}`}>{t.status}</span>{" "}
-                {t.is_overdue && <span className="badge warn">overdue</span>}
+                {t.is_overdue && <span className="badge warn">overdue</span>}{" "}
+                <UrgencyTag urgency={t.urgency} />
               </span>
               <select
                 className="btn small"

@@ -41,6 +41,23 @@ class NetWorthSaved(BaseModel):
     updated_at: datetime
 
 
+class NetWorthTrend(BaseModel):
+    """Direction read off the saved snapshots - absent when they are too few.
+
+    Unknown days are reported as gaps and excluded from the arithmetic; no
+    figure is ever interpolated to complete the line."""
+
+    from_date: date
+    to_date: date
+    known_days: int
+    gap_days: int
+    slope_minor_per_day: int
+    change_minor: int
+    recent_average_minor: int
+    # "building" | "steady" | "declining" - only once the slope clears the band.
+    direction: str
+
+
 class Valuation(BaseModel):
     currency: str
     lines: list[ValuationLine]
@@ -63,4 +80,6 @@ class Valuation(BaseModel):
 
     saved: NetWorthSaved | None
     history: list[NetWorthSaved]
+    # None until at least three complete days exist to read a direction from.
+    trend: NetWorthTrend | None
     note: str

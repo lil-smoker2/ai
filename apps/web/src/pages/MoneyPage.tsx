@@ -15,10 +15,12 @@ import { useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
 import { api } from "../services/api";
 import { formatMinor } from "../lib/money";
+import { AnomalyPanel } from "../features/money/AnomalyPanel";
 import type {
   Account,
   AccountType,
   BalanceSummary,
+  ExpenseAnomalies,
   MonthSummary,
   Transaction,
   TransactionPage,
@@ -205,12 +207,17 @@ export function MoneyPage() {
     queryKey: ["month-summary"],
     queryFn: () => api<MonthSummary>("/api/transactions/summary/month"),
   });
+  const anomalies = useQuery({
+    queryKey: ["expense-anomalies"],
+    queryFn: () => api<ExpenseAnomalies>("/api/transactions/anomalies"),
+  });
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["accounts"] });
     queryClient.invalidateQueries({ queryKey: ["accounts-summary"] });
     queryClient.invalidateQueries({ queryKey: ["transactions"] });
     queryClient.invalidateQueries({ queryKey: ["month-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["expense-anomalies"] });
   };
 
   const accountForm = useForm<AccountValues>({ defaultValues: EMPTY_ACCOUNT });
@@ -784,6 +791,7 @@ export function MoneyPage() {
               <p className="muted">No transactions recorded.</p>
             )}
           </div>
+          {anomalies.data && <AnomalyPanel data={anomalies.data} />}
         </>
       )}
 

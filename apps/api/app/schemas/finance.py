@@ -214,3 +214,23 @@ class MonthSummary(BaseModel):
     expense_minor: int
     # Transfers are excluded from income/expenses by design.
     transfers_minor: int
+
+
+class ExpenseAnomalyOut(BaseModel):
+    """One expense judged unusual against its own category's recorded median."""
+
+    transaction_id: int
+    description: str | None
+    category: str
+    amount_minor: int
+    currency: str
+    occurred_on: date
+    category_median_minor: int
+    deviation_score: float
+
+
+class ExpenseAnomaliesOut(BaseModel):
+    generated_on: date
+    window_days: int
+    min_category_expenses: int
+    anomalies: list[ExpenseAnomalyOut]

@@ -19,7 +19,9 @@ from app.schemas.tasks import (
     TaskCreate,
     TaskOut,
     TaskUpdate,
+    TaskUrgency,
 )
+from app.services import urgency as urgency_service
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -37,6 +39,7 @@ def _task_out(task: Task) -> TaskOut:
         and task.due_on < date.today()
         and task.status in _OPEN_STATUSES
     )
+    out.urgency = TaskUrgency(**urgency_service.score(task.priority, task.due_on, task.status))
     return out
 
 
@@ -56,6 +59,7 @@ def _validate_goal(db: Session, user: User, goal_id: int | None) -> None:
 def list_tasks(
     status_filter: str | None = Query(default=None, alias="status"),
     goal_id: int | None = Query(default=None),
+    sort: str | None = Query(default=None, pattern="^(urgency|due)$"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -67,7 +71,12 @@ def list_tasks(
     tasks = db.scalars(
         query.order_by(Task.due_on.asc().nullslast(), Task.created_at.desc())
     ).all()
-    return [_task_out(t) for t in tasks]
+    outs = [_task_out(t) for t in tasks]
+    if sort == "urgency":
+        # Most pressing first; ties fall back to the due-order the query gave,
+        # so an unsettled earlier task leads among equals.
+        outs.sort(key=lambda o: -o.urgency.score)
+    return outs
 
 
 @router.post("", response_model=TaskOut, status_code=201)

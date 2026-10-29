@@ -22,6 +22,7 @@ const task: Task = {
   created_at: "2026-09-20T00:00:00Z",
   completed_at: null,
   is_overdue: true,
+  urgency: { score: 40, band: "overdue", priority_points: 10, overdue_points: 30 },
 };
 
 function jsonResponse(body: unknown): Response {

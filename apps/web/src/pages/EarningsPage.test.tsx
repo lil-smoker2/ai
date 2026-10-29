@@ -258,6 +258,19 @@ describe("EarningsPage", () => {
       screen.getByRole("button", { name: /Show what it would give/i }),
     ).toBeDisabled();
   });
+
+  it("shows the curated reading list under the places you can add", async () => {
+    stubFetch({ "/api/earnings/vehicles": [] });
+    renderPage();
+    fireEvent.click(screen.getByRole("tab", { name: /Places to save/i }));
+
+    // A directory of where to look - static reference beside your own cards.
+    expect(
+      await screen.findByRole("heading", { name: /Investment and betting websites/i }),
+    ).toBeInTheDocument();
+    // It keeps the app's own limit in view: not connected, not a recommendation.
+    expect(screen.getByText(/not connected to any of these sites/i)).toBeInTheDocument();
+  });
 });
 
 const ziidi: SavingsVehicle = {

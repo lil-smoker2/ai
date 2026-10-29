@@ -18,8 +18,16 @@ from app.core.config import Settings, get_settings
 from app.core.database import SessionLocal, get_db
 from app.models.asset import Asset, AssetAnalysis
 from app.models.user import User
-from app.schemas.assets import AnalysisOut, AssetOut, AssetPage, ScanRequest, ScanStatus
+from app.schemas.assets import (
+    AnalysisOut,
+    AssetOut,
+    AssetPage,
+    ScanRequest,
+    ScanStatus,
+    SimilarAssetsOut,
+)
 from app.schemas.common import Page
+from app.services import perceptual
 from app.services.asset_scanner import category_match, scan_assets
 
 router = APIRouter(prefix="/api/assets", tags=["assets"])
@@ -127,6 +135,19 @@ def list_categories(db: Session = Depends(get_db),
         select(Asset.category).where(Asset.status == "active").distinct()
     ).all()
     return sorted(rows)
+
+
+@router.get("/similar", response_model=SimilarAssetsOut)
+def similar_assets(db: Session = Depends(get_db),
+                   user: User = Depends(get_current_user)):
+    """Pictures that look alike but are not byte-for-byte copies.
+
+    Recomputed from the files on every call. Exact duplicates are already
+    folded away by the content-hash scan, so a group here is the same shot
+    re-saved, resized or lightly edited. A picture with no near-duplicate is
+    simply not listed. Declared ahead of the /{asset_id} route so this literal
+    path is not swallowed by the id parameter."""
+    return perceptual.find_similar_assets(db, get_settings())
 
 
 @router.get("/{asset_id}", response_model=AssetOut)

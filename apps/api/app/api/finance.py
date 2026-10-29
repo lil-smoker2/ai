@@ -21,12 +21,14 @@ from app.schemas.finance import (
     AccountOut,
     AccountUpdate,
     BalanceSummary,
+    ExpenseAnomaliesOut,
     MonthSummary,
     TransactionCreate,
     TransactionOut,
     TransactionPage,
     normalize_account_details,
 )
+from app.services import anomalies as anomaly_service
 
 router = APIRouter(prefix="/api", tags=["money"])
 
@@ -251,6 +253,18 @@ def list_transactions(
         transactions=rows,
         page=Page(total=total, page=page, page_size=page_size),
     )
+
+
+@router.get("/transactions/anomalies", response_model=ExpenseAnomaliesOut)
+def expense_anomalies(db: Session = Depends(get_db),
+                     user: User = Depends(get_current_user)):
+    """Expenses that stand out against their own category's recent middle.
+
+    Recomputed from saved transactions on every call; a category too thin to
+    have a dependable median reports nothing. Declared ahead of the integer
+    /transactions/{transaction_id} route so the literal path is not swallowed
+    by the id parameter."""
+    return anomaly_service.find_expense_anomalies(db, user)
 
 
 @router.get("/transactions/{transaction_id}", response_model=TransactionOut)

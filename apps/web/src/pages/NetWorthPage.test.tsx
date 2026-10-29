@@ -54,6 +54,7 @@ const trousers: Valuation = {
     updated_at: "2026-10-28T10:00:00Z",
   },
   history: [],
+  trend: null,
   note: "Net worth is the value of what you own.",
 };
 

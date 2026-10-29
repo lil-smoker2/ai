@@ -36,6 +36,19 @@ class TaskUpdate(BaseModel):
     remind_before_days: int | None = Field(default=None, ge=0, le=90)
 
 
+class TaskUrgency(BaseModel):
+    """A task's pressiveness, read from its priority and due date.
+
+    Deterministic and shown with its parts: the two weights that make up the
+    score travel with it, so nothing has to be trusted on its own."""
+
+    score: int
+    # "overdue" | "due-soon" | "scheduled" | "unscheduled" | "settled"
+    band: str
+    priority_points: int
+    overdue_points: int
+
+
 class TaskOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,6 +66,12 @@ class TaskOut(BaseModel):
     completed_at: datetime | None
     # Computed: past-due and not finished. Never implies anything about money.
     is_overdue: bool = False
+    # Computed urgency, derived from priority + due date on each read. The
+    # default is a placeholder the API overwrites; it is never what is returned.
+    urgency: TaskUrgency = Field(
+        default_factory=lambda: TaskUrgency(score=0, band="scheduled",
+                                             priority_points=0, overdue_points=0)
+    )
 
 
 class SnoozeRequest(BaseModel):

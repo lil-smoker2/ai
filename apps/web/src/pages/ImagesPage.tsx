@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { api } from "../services/api";
 import { AssetThumb } from "../features/assets/AssetThumb";
+import { SimilarAssetsSection } from "../features/assets/SimilarAssetsPanel";
 import type { Asset, AssetPage, ScanStatus } from "../types/api";
 
 const PAGE_SIZE = 18;
@@ -199,6 +200,10 @@ export function ImagesPage() {
           </div>
         </>
       )}
+
+      <div className="similar-assets-wrap">
+        <SimilarAssetsSection />
+      </div>
     </div>
   );
 }

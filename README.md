@@ -93,6 +93,50 @@ picture from the same asset library (matched by category folder), and an item
 with no price keeps the total **unknown** rather than counting it as free.
 `GET /api/networth` serves the same data.
 
+### Derived readings
+
+Six small analyses read a picture of your own records that you never typed in -
+every figure is recomputed from saved rows, and a number you did not record
+stays unknown instead of becoming a guess:
+
+- **Replenishment forecast** (Inventory) - a per-day consumption rate from an
+  item's own quantity history, floored so a run-out date is never over-optimistic.
+- **Goal completion pace** (Goals) - how fast contributions have actually been
+  landing, projected against the deadline; silent when nothing was recently saved.
+- **Expense anomalies** (Money) - a category's own recent middle (median) with
+  outliers flagged by a MAD z-score; a category too thin to have a dependable
+  middle reports nothing. `GET /api/transactions/anomalies`.
+- **Net-worth trend** (Net worth) - a least-squares slope and moving average over
+  saved snapshots; gap days are named and left out, never interpolated.
+- **Task urgency** (Tasks) - a deterministic priority-plus-overdue score used to
+  order the list; `?sort=urgency`.
+- **Pictures that look alike** (Images) - *near-duplicate* detection. Exact
+  byte-for-byte copies are already folded away by the content hash; a deterministic,
+  offline perceptual hash (a 64-bit DCT fingerprint computed with Pillow alone) then
+  groups genuinely different files - the same shot re-saved, resized or lightly
+  edited. `GET /api/assets/similar`.
+
+Semantic / embedding image search was considered and **deliberately not built**:
+it needs a heavyweight model dependency and either a network round-trip or a
+large local model, which contradicts this app's deterministic, offline,
+small-data design. Near-duplicate detection gets the practical win (spotting the
+re-saved photo) with no model and no new dependency.
+
+### Places to save: a reading list
+
+Under **Savings & Earnings → Places to save** there is a curated, static reading
+list of investment and betting sites for Kenya and America - where to learn
+(CMA, Investor.gov), practise with virtual money (TradingView), research
+companies (NSE, SEC EDGAR), and, by your own choice, buy Kenyan or US shares
+(CDSC, Interactive Brokers, Trading 212), with the betting entries (Betika,
+Aviator) kept clearly apart and labelled as gambling. It is *reference, not a
+record*: nothing is saved to your database, no rate or price is quoted, and
+LifeSmart is not connected to any of these sites, so it cannot verify a fee, an
+operator's licence, or whether a platform still accepts Kenyan residents. Each
+entry states how you can lose money, and the one worked example (what a swing
+does to KSh 5,000) is marked as a hypothetical before fees and tax - never a
+prediction. The list lives in `apps/web/src/features/earnings/investmentGuide.ts`.
+
 ### Uninstall
 
 ```bash
