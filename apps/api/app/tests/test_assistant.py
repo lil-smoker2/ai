@@ -67,6 +67,33 @@ def test_app_help_privacy_question(client, auth_headers):
     assert "machine" in reply["content"].lower()
 
 
+def test_greeting_gets_warm_opener_not_a_report(client, auth_headers):
+    # A bare "hi" (and friends) is answered with a greeting, no data cards.
+    for hello in ("hi", "Hello!", "hey there", "how are you", "good morning"):
+        reply = _ask(client, auth_headers, hello)["assistant_message"]
+        assert reply["cards"] in (None, []), hello
+        assert reply["proposal"] is None, hello
+        assert "saved records" in reply["content"].lower(), hello
+
+
+def test_greeting_is_not_hijacked_by_loaded_model(client, auth_headers, monkeypatch):
+    # Even if a loaded model misroutes a greeting to a data intent, the router
+    # answers small talk first, so "hi" never opens a budget report.
+    from app.services import llm
+
+    monkeypatch.setattr(llm, "is_ready", lambda: True)
+    monkeypatch.setattr(llm, "classify_intent", lambda text: "budget")
+    reply = _ask(client, auth_headers, "hi")["assistant_message"]
+    assert reply["cards"] in (None, [])
+    assert "transaction" not in reply["content"].lower()
+
+
+def test_greeting_with_a_real_question_still_routes(client, auth_headers):
+    # "hey" followed by an actual query must not be swallowed by the greeter.
+    reply = _ask(client, auth_headers, "hey, what am I missing in my wardrobe?")
+    assert not reply["assistant_message"]["content"].startswith("Hey there")
+
+
 def test_unknown_question_falls_back_to_guidance(client, auth_headers):
     reply = _ask(client, auth_headers, "qwerty zxcv plugh")["assistant_message"]
     # Transparent about its two modes rather than dead-ending or guessing.

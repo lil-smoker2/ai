@@ -16,6 +16,7 @@ from a photograph, and never fabricates data.
 """
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 
@@ -74,6 +75,52 @@ def _norm(text: str) -> str:
 def _is_howto(text: str) -> bool:
     low = _norm(text)
     return any(cue in low for cue in _HOWTO_CUES)
+
+
+# Casual greetings and pleasantries that carry no data question. A small local
+# model misclassifies these constantly (e.g. it routes "hi" to the budget tool),
+# so the router answers them itself before any model intent override runs. Match
+# only on short messages so a real question starting with one of these words
+# ("hey, what am I missing?") still reaches the data tools.
+_SMALLTALK_EXACT = {
+    "hi", "hey", "hello", "hallo", "helo", "hie", "heya", "yo", "hiya",
+    "howdy", "hola", "buna", "sasa", "sup", "hey there", "hi there",
+    "good morning", "good afternoon", "good evening", "good day",
+    "morning", "afternoon", "evening",
+    "whats up", "what up", "wassup", "how are you", "how are you doing",
+    "how r u", "hows it going", "how is it going", "how you doing",
+    "how do you do", "you good", "you ok", "you okay", "are you ok",
+    "are you okay", "hows things", "how are things", "how have you been",
+    "how r u doing", "how ru", "not much", "not much you",
+    "nice to meet you", "pleasure to meet you", "greetings",
+    "thanks", "thank you", "thanks a lot", "thank you so much", "thx",
+    "ty", "much appreciated", "appreciate it", "awesome thanks",
+    "perfect thanks", "great thanks", "okay thanks", "ok thanks",
+    "bye", "goodbye", "see you", "see ya", "cya", "take care",
+    "have a good day", "thats all", "nothing else",
+}
+
+# Interjection / filler words to strip before the exact match, so "oh hello",
+# "hi there" and "yes thanks" all reduce to a known greeting.
+_SMALLTALK_FILLER = {"oh", "ah", "ahh", "hmm", "please", "and", "just", "yes",
+                     "yep", "ok", "okay", "there", "then", "so", "well"}
+
+
+def _is_smalltalk(text: str) -> bool:
+    """True for a bare greeting/pleasantry with no actual question in it.
+
+    Pure exact match on the curated set: a real data or how-to question never
+    reduces to one of these phrases, so we deliberately do NOT consult the
+    scoring router here (its substring matching mis-scores short words like
+    "hi", which is exactly the artifact that let a greeting reach a data tool).
+    """
+    low = _norm(text)
+    if not low or len(low) > 40:
+        return False
+    # Drop punctuation and apostrophes, then fillers, before the exact match.
+    low = re.sub(r"[^a-z0-9\s]", "", low.replace("'", ""))
+    words = [w for w in low.split() if w not in _SMALLTALK_FILLER]
+    return " ".join(words) in _SMALLTALK_EXACT
 
 
 # --- intent routing ---------------------------------------------------------
@@ -456,6 +503,22 @@ def _tool_help(user: User) -> dict:
     }
 
 
+def _tool_greeting() -> dict:
+    """A warm, honest opener for casual greetings so a bare "hi" (or a small
+    model misreading one) never dumps a data report on the user."""
+    return {
+        "content": (
+            "Hey there. I'm your LifeSmart assistant. I answer only from your "
+            "own saved records — your money and budget, what you're low on, your "
+            "goals and their priority, fees and deadlines — and I can explain how "
+            "to use the app. Anything I'd change waits for you to confirm it. What "
+            "would you like to look at?"
+        ),
+        "cards": [],
+        "proposal": None,
+    }
+
+
 # --- retrieval over the project (help + the user's own records) -------------
 #
 # When the deterministic router has no confident answer, we assemble a short,
@@ -595,6 +658,11 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     """
     if asset_id is not None:
         return _tool_image(db, user, asset_id)
+
+    # A bare greeting is answered directly, before any model intent override, so
+    # a misread "hi" can never open a budget/inventory report.
+    if _is_smalltalk(text):
+        return _tool_greeting()
 
     intent = _detect_intent(text, False)
     model_ready = llm.is_ready()
