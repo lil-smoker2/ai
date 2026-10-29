@@ -78,50 +78,67 @@ def _is_howto(text: str) -> bool:
     return any(cue in low for cue in _HOWTO_CUES)
 
 
-# Casual greetings and pleasantries that carry no data question. A small local
-# model misclassifies these constantly (e.g. it routes "hi" to the budget tool),
-# so the router answers them itself before any model intent override runs. Match
-# only on short messages so a real question starting with one of these words
-# ("hey, what am I missing?") still reaches the data tools.
-_SMALLTALK_EXACT = {
+# Casual openers and pleasantries that carry no data question. A small local
+# model misclassifies these constantly (it routes "hi" or "I am David" to the
+# budget tool), so the router answers them itself as a chatbot, before any model
+# intent override runs. Match only on short messages so a real question that
+# merely starts with one of these words ("hey, what am I missing?") still
+# reaches the data tools.
+_GREETINGS = {
     "hi", "hey", "hello", "hallo", "helo", "hie", "heya", "yo", "hiya",
-    "howdy", "hola", "buna", "sasa", "sup", "hey there", "hi there",
+    "howdy", "hola", "buna", "sasa", "sup", "greetings",
     "good morning", "good afternoon", "good evening", "good day",
     "morning", "afternoon", "evening",
+}
+
+_HOWAREYOU = {
     "whats up", "what up", "wassup", "how are you", "how are you doing",
     "how r u", "hows it going", "how is it going", "how you doing",
     "how do you do", "you good", "you ok", "you okay", "are you ok",
     "are you okay", "hows things", "how are things", "how have you been",
-    "how r u doing", "how ru", "not much", "not much you",
-    "nice to meet you", "pleasure to meet you", "greetings",
-    "thanks", "thank you", "thanks a lot", "thank you so much", "thx",
-    "ty", "much appreciated", "appreciate it", "awesome thanks",
-    "perfect thanks", "great thanks", "okay thanks", "ok thanks",
+    "how r u doing", "how ru", "not much", "not much you", "you good",
+}
+
+_GRATITUDE = {
+    "thanks", "thank you", "thanks a lot", "thank you so much", "thx", "ty",
+    "much appreciated", "appreciate it", "awesome thanks", "perfect thanks",
+    "great thanks", "okay thanks", "ok thanks", "nice thanks",
+}
+
+_FAREWELLS = {
     "bye", "goodbye", "see you", "see ya", "cya", "take care",
-    "have a good day", "thats all", "nothing else",
+    "have a good day", "thats all", "nothing else", "that is all",
 }
 
 # Interjection / filler words to strip before the exact match, so "oh hello",
-# "hi there" and "yes thanks" all reduce to a known greeting.
+# "hi there" and "yes thanks" all reduce to a known phrase.
 _SMALLTALK_FILLER = {"oh", "ah", "ahh", "hmm", "please", "and", "just", "yes",
-                     "yep", "ok", "okay", "there", "then", "so", "well"}
+                     "yep", "ok", "okay", "there", "then", "so", "well", "the"}
 
 
-def _is_smalltalk(text: str) -> bool:
-    """True for a bare greeting/pleasantry with no actual question in it.
+def _smalltalk_kind(text: str) -> str | None:
+    """Classify a bare pleasantry, or None if it is not one.
 
-    Pure exact match on the curated set: a real data or how-to question never
+    Pure exact match on curated sets: a real data or how-to question never
     reduces to one of these phrases, so we deliberately do NOT consult the
     scoring router here (its substring matching mis-scores short words like
-    "hi", which is exactly the artifact that let a greeting reach a data tool).
+    "hi", the exact artifact that let a greeting reach a data tool).
     """
     low = _norm(text)
     if not low or len(low) > 40:
-        return False
-    # Drop punctuation and apostrophes, then fillers, before the exact match.
+        return None
     low = re.sub(r"[^a-z0-9\s]", "", low.replace("'", ""))
     words = [w for w in low.split() if w not in _SMALLTALK_FILLER]
-    return " ".join(words) in _SMALLTALK_EXACT
+    phrase = " ".join(words)
+    if phrase in _GREETINGS:
+        return "greet"
+    if phrase in _HOWAREYOU:
+        return "howareyou"
+    if phrase in _GRATITUDE:
+        return "thanks"
+    if phrase in _FAREWELLS:
+        return "bye"
+    return None
 
 
 # --- intent routing ---------------------------------------------------------
@@ -504,20 +521,98 @@ def _tool_help(user: User) -> dict:
     }
 
 
-def _tool_greeting() -> dict:
-    """A warm, honest opener for casual greetings so a bare "hi" (or a small
-    model misreading one) never dumps a data report on the user."""
-    return {
-        "content": (
-            "Hey there. I'm your LifeSmart assistant. I can talk you through your "
-            "own saved records — your money and budget, what you're low on, your "
-            "goals and their priority, fees and deadlines — explain how to use any "
-            "part of the app, or just have a normal chat. Anything I'd change waits "
-            "for you to confirm it. What would you like to do?"
-        ),
-        "cards": [],
-        "proposal": None,
-    }
+def _first_name(user: User) -> str | None:
+    full = (getattr(user, "full_name", "") or "").strip()
+    return full.split()[0] if full else None
+
+
+# Self-introduction patterns. The explicit phrases ("my name is", "call me", ...)
+# always introduce a name; the bare "I am <Name>" form counts only when the next
+# word is capitalised in the original message and isn't a state like "I am
+# broke", so a statement is never mistaken for a name.
+_INTRO_RE = re.compile(
+    r"(?:my name is|name is|name's|call me)\s+([A-Za-z][A-Za-z'\-]{1,30})",
+    re.IGNORECASE,
+)
+_IAM_RE = re.compile(r"\bi\s*['`]?(?:am|m)\s+([A-Za-z][A-Za-z'\-]{1,30})\b")
+
+# Words that often follow "I am" but are not a person's name.
+_NOT_A_NAME = {
+    "here", "back", "sorry", "sure", "fine", "good", "great", "well", "alright",
+    "ok", "okay", "confused", "lost", "new", "interested", "curious", "done",
+    "ready", "busy", "tired", "happy", "sad", "stuck", "unsure", "trying",
+    "not", "just", "still", "feeling", "set", "starting", "going", "about",
+}
+
+
+def _intro_name(raw: str) -> str | None:
+    m = _INTRO_RE.search(raw or "")
+    if m:
+        return m.group(1).capitalize()
+    m = _IAM_RE.search(raw or "")
+    if m:
+        word = m.group(1)
+        if word[0].isupper() and word.lower() not in _NOT_A_NAME:
+            return word.capitalize()
+    return None
+
+
+def _social_reply(text: str, user: User) -> dict | None:
+    """A short, warm reply for bare social turns - greetings, self-introductions
+    and thanks/farewells.
+
+    These are not questions, so they are answered directly and never handed to
+    the router or the model; that is what stops "hi" or "I am David" from being
+    misread as a data request. Anything that looks like an actual question or
+    prompt returns None so the caller can route it to the model.
+    """
+    first = _first_name(user)
+
+    # A self-introduction wins even when wrapped in a greeting ("hello I am Dave").
+    name = _intro_name(text)
+    if name:
+        return _conv(
+            f"Nice to meet you, {name}! I'm your LifeSmart assistant — a private "
+            "chatbot that runs on this device. Ask me anything about the app or "
+            "just chat, and when you like I'll walk you through your money, goals "
+            "and inventory straight from your saved records. How can I help?")
+
+    kind = _smalltalk_kind(text)
+    if kind == "greet":
+        hello = f"Hi {first}!" if first else "Hey there!"
+        return _conv(
+            f"{hello} I'm your LifeSmart assistant — a private chatbot on this "
+            "device. Ask me a question, say 'load the model' for richer answers, "
+            "or tell me what you'd like to look at in your saved records.")
+    if kind == "howareyou":
+        reply = (f"Doing great, {first} — thanks for asking!" if first
+                 else "I'm doing well, thanks for asking!")
+        return _conv(
+            f"{reply} What would you like to dig into today — your money, goals, "
+            "inventory or the app? I read everything straight from your saved "
+            "records and never invent a figure.")
+    if kind == "thanks":
+        return _conv("Anytime. Ask me about your records, the app, or anything else.")
+    if kind == "bye":
+        goodbye = f"Take care, {first}!" if first else "Take care!"
+        return _conv(f"{goodbye} I'm here whenever you need me.")
+
+    # Name recall: "what's my name?", "do you remember me?".
+    low = _norm(text)
+    if any(c in low for c in (
+        "what is my name", "whats my name", "do you remember my name",
+        "do you remember me", "do you remember my", "who am i", "know my name",
+    )):
+        if first:
+            return _conv(
+                f"You're {first} — that's the name on this device's LifeSmart "
+                "account. Want to look at your records or learn how something "
+                "works?")
+        return _conv(
+            "I don't have a name saved for you yet. What would you like me to "
+            "call you?")
+
+    return None
 
 
 def _conv(message: str) -> dict:
@@ -904,13 +999,15 @@ def _run_tool(db: Session, user: User, text: str, intent: str) -> dict:
 def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     """Answer a turn, grounded on saved records and the built-in help.
 
-    Image turns go straight to the image tool. Otherwise the message is scored
-    against the data concepts and the app-help knowledge base: an explicit
-    "how do I use the app" question prefers a help topic, a data question runs
-    its read-tool, and a question naming a specific thing that matches no single
-    concept triggers a keyword search across the user's records. Only when even
-    that finds nothing does a transparent fallback explain what the assistant
-    can do.
+    The assistant behaves as a chatbot you can talk to. Image turns go straight
+    to the image tool. Otherwise a chatbot layer answers greetings, self-
+    introductions ("I am David") and everyday chit-chat about the assistant, the
+    app or general topics before anything else - so a bare "hi" is never turned
+    into a data report. Real questions then route by concept: a "how do I use the
+    app" question prefers a help topic, a data question runs its read-tool, and a
+    question naming a specific thing that matches no single concept triggers a
+    keyword search across the user's records. Only when even that finds nothing
+    does a transparent fallback explain what the assistant can do.
 
     When the user has loaded the optional local model it strengthens this flow
     without ever owning a figure: it may pick a more accurate data intent and
@@ -923,10 +1020,13 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     if asset_id is not None:
         return _tool_image(db, user, asset_id)
 
-    # A bare greeting is answered directly, before any model intent override, so
-    # a misread "hi" can never open a budget/inventory report.
-    if _is_smalltalk(text):
-        return _tool_greeting()
+    # Chatbot layer first: greetings, self-introductions ("I am David") and
+    # bare pleasantries are answered as conversation BEFORE the router or the
+    # optional model runs, so a small model can never turn them into a report.
+    # Real questions and prompts fall straight through.
+    chat = _social_reply(text, user)
+    if chat is not None:
+        return chat
 
     intent = _detect_intent(text, False)
     model_ready = llm.is_ready()
@@ -937,7 +1037,18 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     topic = assistant_help.match(text)
 
     if _is_howto(text) and topic is not None:
+        # A "how do I use the app" question: when a model is loaded it phrases
+        # the answer conversationally (the topic is in its retrieved context);
+        # otherwise we return the curated help topic directly.
+        if model_ready:
+            assisted = _model_assisted(db, user, text)
+            if assisted is not None:
+                return assisted
         return _tool_apphelp(topic)
+
+    # A question that maps to a data concept: answer from grounded records so
+    # every figure is real. The model may only reword the summary, never own a
+    # number.
     if intent != "help":
         result = _run_tool(db, user, text, intent)
         if model_ready:
@@ -956,13 +1067,16 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     if search is not None and search["total"] > 0:
         return _tool_search(db, user, text, search, model_ready)
 
+    # Everything else is a genuine question or prompt - hand it to the loaded
+    # model, which answers from retrieved project context and general knowledge
+    # while the honesty guard still rejects any invented figure.
     assisted = _model_assisted(db, user, text)
     if assisted is not None:
         return assisted
 
-    # Nothing in the records matched and no model answered: hold a normal
-    # conversation about the assistant, the app or general topics instead of
-    # only ever replying with the records guide.
+    # No model loaded (or it refused the question): hold a normal conversation
+    # about the assistant and the app deterministically, so everyday questions
+    # still get a real reply instead of only the records guide.
     conv = _conversation(text)
     if conv is not None:
         return conv
