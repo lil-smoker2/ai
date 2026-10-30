@@ -27,7 +27,7 @@ from app.models.user import utcnow
 
 FEE_CATEGORIES = ("tuition", "registration", "other")
 # A hostel's availability as last seen by the user; unknown until checked.
-HOSTEL_STATUSES = ("unchecked", "available", "taken", "booked")
+HOSTEL_STATUSES = ("unchecked", "available", "taken", "booked", "paid")
 
 
 class FeeObligation(Base):

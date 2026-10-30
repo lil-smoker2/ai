@@ -19,9 +19,7 @@ import type {
 } from "../types/api";
 
 const FEE_CATEGORIES: FeeCategory[] = ["tuition", "registration", "other"];
-const HOSTEL_STATUSES: HostelStatus[] = ["unchecked", "available", "taken", "booked"];
-
-const toMinor = (v: string) => (v.trim() === "" ? null : Math.round(Number(v) * 100));
+const toMinor = (v: any) => { if (!v || typeof v !== 'string' || v.trim() === "") return null; const n = Number(v); if (isNaN(n)) return null; return Math.round(n * 100); };
 
 type Tab = "overview" | "fees" | "accommodation" | "food";
 
@@ -45,6 +43,7 @@ interface HostelForm {
   deposit: string;
   facilities: string;
   booking_source: string;
+  paid: string;
 }
 
 export function StudentPage() {
@@ -306,65 +305,55 @@ export function StudentPage() {
 
       {tab === "accommodation" && (
         <>
-          <form className="card auth-form" onSubmit={hostelForm.handleSubmit((v) => addHostel.mutate(v))}>
-            <h2>Add hostel option</h2>
+          <div className="card">
+            <h2>Choose Accommodation</h2>
+            <p className="muted">Chuka University - Select your hostel</p>
             <div className="btn-row">
-              <label>
-                Name
-                <input {...hostelForm.register("name", { required: true })} />
-              </label>
-              <label>
-                Location
-                <input {...hostelForm.register("location")} />
-              </label>
-              <label>
-                Monthly rent (KES)
-                <input type="number" min="0" step="0.01" {...hostelForm.register("monthly_rent")} />
-              </label>
-              <label>
-                Deposit (KES)
-                <input type="number" min="0" step="0.01" {...hostelForm.register("deposit")} />
-              </label>
-              <label>
-                Facilities
-                <input {...hostelForm.register("facilities")} />
-              </label>
-              <label>
-                Booking source
-                <input {...hostelForm.register("booking_source")} />
-              </label>
+              <button className="btn primary" onClick={() => {
+                hostelForm.setValue("name", "Muthaiga");
+                hostelForm.setValue("monthly_rent", "12000");
+                hostelForm.setValue("location", "Chuka University");
+                addHostel.mutate(hostelForm.getValues());
+              }}>Book Muthaiga (KES 12,000)</button>
+              <button className="btn primary" onClick={() => {
+                hostelForm.setValue("name", "Western/Lower Hostels");
+                hostelForm.setValue("monthly_rent", "4000");
+                hostelForm.setValue("location", "Chuka University");
+                addHostel.mutate(hostelForm.getValues());
+              }}>Book Western/Lower Hostels (KES 4,000)</button>
             </div>
-            <button className="btn primary" type="submit" disabled={addHostel.isPending}>
-              <Plus size={16} aria-hidden /> Add Option
-            </button>
-          </form>
+          </div>
 
           <div className="card">
-            <h2>Accommodation options</h2>
+            <h2>My Accommodation</h2>
             {(hostels.data ?? []).map((h) => (
               <div key={h.id} className="list-row">
                 <span>
                   <strong>{h.name}</strong>
                   {h.location ? <span className="muted"> · {h.location}</span> : null}
                   <span className="muted">
-                    {" "}· rent {formatMinor(h.monthly_rent_minor)} · deposit {formatMinor(h.deposit_minor)}
+                    {" "}· Rent {formatMinor(h.monthly_rent_minor)}
                   </span>
-                  {h.last_checked_at && (
-                    <span className="muted"> · checked {h.last_checked_at.slice(0, 10)}</span>
-                  )}
+                  <span className={`badge ${h.status === "booked" ? "income" : h.status === "paid" ? "income" : ""}`}>
+                    {h.status === "booked" ? "Booked" : h.status}
+                  </span>
                 </span>
-                <select
-                  className="btn small"
-                  value={h.status}
-                  onChange={(e) =>
-                    setAvailability.mutate({ id: h.id, status: e.target.value as HostelStatus })
-                  }
-                >
-                  {HOSTEL_STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
-                </select>
+                <div className="btn-row">
+                  {h.status !== "booked" && h.status !== "paid" && (
+                    <button className="btn small" onClick={() => setAvailability.mutate({ id: h.id, status: "booked" as HostelStatus })}>
+                      Book
+                    </button>
+                  )}
+                  {(h.status === "booked" || h.status === "available") && (
+                    <button className="btn small primary" onClick={() => setAvailability.mutate({ id: h.id, status: "paid" as HostelStatus })}>
+                      Confirm I have paid
+                    </button>
+                  )}
+                  {h.status === "paid" && <span className="badge income">Paid</span>}
+                </div>
               </div>
             ))}
-            {hostels.data?.length === 0 && <p className="muted">No accommodation options yet.</p>}
+            {hostels.data?.length === 0 && <p className="muted">No accommodation selected yet. Choose Muthaiga or Western/Lower Hostels above.</p>}
           </div>
         </>
       )}

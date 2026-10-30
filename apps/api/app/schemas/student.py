@@ -8,7 +8,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 FEE_CATEGORIES = ("tuition", "registration", "other")
-HOSTEL_STATUSES = ("unchecked", "available", "taken", "booked")
+HOSTEL_STATUSES = ("unchecked", "available", "taken", "booked", "paid")
 
 _FEE_CAT_RE = f"^({'|'.join(FEE_CATEGORIES)})$"
 _HOSTEL_RE = f"^({'|'.join(HOSTEL_STATUSES)})$"

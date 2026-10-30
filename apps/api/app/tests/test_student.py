@@ -100,6 +100,43 @@ def test_availability_update_records_check_time(client, auth_headers):
     assert updated["last_checked_at"] is not None
 
 
+def test_paid_is_a_valid_availability_status(client, auth_headers):
+    # A paid hostel is a user-reported state like "booked": it must be accepted
+    # and stored, not rejected by the status whitelist.
+    h = client.post(
+        "/api/student/hostels",
+        json={"name": "Muthaiga"}, headers=auth_headers,
+    ).json()
+    booked = client.post(
+        f"/api/student/hostels/{h['id']}/availability",
+        json={"status": "booked"}, headers=auth_headers,
+    ).json()
+    assert booked["status"] == "booked"
+
+    paid = client.post(
+        f"/api/student/hostels/{h['id']}/availability",
+        json={"status": "paid"}, headers=auth_headers,
+    ).json()
+    assert paid["status"] == "paid"
+    assert paid["last_checked_at"] is not None
+
+    # It survives a reload of the list.
+    assert next(
+        x for x in client.get("/api/student/hostels", headers=auth_headers).json()
+        if x["id"] == h["id"]
+    )["status"] == "paid"
+
+
+def test_unknown_availability_status_is_rejected(client, auth_headers):
+    h = client.post(
+        "/api/student/hostels", json={"name": "Muthaiga"}, headers=auth_headers
+    ).json()
+    assert client.post(
+        f"/api/student/hostels/{h['id']}/availability",
+        json={"status": "moved_in"}, headers=auth_headers,
+    ).status_code == 422
+
+
 # --- Food budget ---
 
 def test_food_budget_defaults_null_and_derives_daily(client, auth_headers):

@@ -501,7 +501,7 @@ export interface TaskUrgency {
 // --- Student Life ---
 export type FeeCategory = "tuition" | "registration" | "other";
 export type FeeStatus = "unpaid" | "partial" | "paid";
-export type HostelStatus = "unchecked" | "available" | "taken" | "booked";
+export type HostelStatus = "unchecked" | "available" | "taken" | "booked" | "paid";
 
 export interface FeeObligation {
   id: number;
