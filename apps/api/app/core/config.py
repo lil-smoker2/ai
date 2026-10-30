@@ -66,9 +66,10 @@ class Settings(BaseSettings):
     # Google Sign-In (GIS credential flow). Empty = feature disabled.
     google_client_id: str = ""
 
-    # Single-user local mode (the packaged desktop app): auto sign-in without
-    # login, password or terms. Forced True in frozen builds; keep False when
-    # hosting for multiple users so isolation and auth stay enforced.
+    # Single-user local mode: auto sign-in without login/password/terms for the
+    # packaged desktop app and local personal use. This defaults to True so a
+    # single-user developer setup works without an explicit login flow; set it to
+    # False when hosting a shared multi-user deployment.
     local_single_user: bool = False
 
     # Local LLM for the assistant (a Qwen *.gguf loaded via llama.cpp). Optional

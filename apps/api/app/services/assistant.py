@@ -750,10 +750,57 @@ def _data_notes(db: Session, user: User) -> list[str]:
 
 
 def _build_context(db: Session, user: User, text: str) -> str:
-    parts: list[str] = ["Application help:"]
-    parts += [f"- {n}" for n in _help_notes(text)] or ["- (none matched)"]
-    parts.append("The user's saved records (approximate, today):")
+    parts: list[str] = ["=== LIFESMART APP CONTEXT ==="]
+    parts.append("\nApplication help and features:")
+    parts += [f"- {n}" for n in _help_notes(text)] or ["- General LifeSmart features available"]
+    
+    parts.append("\n=== USER'S SAVED DATA (from database) ===")
     parts += [f"- {n}" for n in _data_notes(db, user)]
+    
+    # Add detailed inventory
+    try:
+        from app.models.inventory import InventoryItem, InventoryCategory
+        items = db.scalars(select(InventoryItem).where(InventoryItem.user_id == user.id)).all()
+        if items:
+            parts.append("\nInventory items:")
+            for it in items[:20]:
+                parts.append(f"  - {it.name}: owned={it.quantity_owned}, target={it.target_quantity}, unit={it.unit or 'pcs'}")
+    except Exception:
+        pass
+    
+    # Add transactions
+    try:
+        from app.models.finance import Transaction, Account
+        txns = db.scalars(select(Transaction).where(Transaction.user_id == user.id).order_by(Transaction.occurred_on.desc()).limit(10)).all()
+        if txns:
+            parts.append("\nRecent transactions:")
+            for tx in txns:
+                parts.append(f"  - {tx.occurred_on}: {tx.type} {tx.amount_minor} minor units - {tx.description or ''}")
+    except Exception:
+        pass
+    
+    # Add goals
+    try:
+        from app.models.goal import Goal
+        goals = db.scalars(select(Goal).where(Goal.user_id == user.id)).all()
+        if goals:
+            parts.append("\nGoals:")
+            for g in goals:
+                parts.append(f"  - {g.name} ({g.type}, priority {g.priority}, status {g.status}): target {g.target_amount_minor} minor units")
+    except Exception:
+        pass
+    
+    # Add tasks
+    try:
+        from app.models.tasks import Task
+        tasks = db.scalars(select(Task).where(Task.user_id == user.id, Task.status != 'done').limit(10)).all()
+        if tasks:
+            parts.append("\nPending tasks:")
+            for t in tasks:
+                parts.append(f"  - {t.title} ({t.status}, due {t.due_on or 'no date'})")
+    except Exception:
+        pass
+    
     return "\n".join(parts)
 
 
@@ -997,39 +1044,23 @@ def _run_tool(db: Session, user: User, text: str, intent: str) -> dict:
 
 
 def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
-    """Answer a turn, grounded on saved records and the built-in help.
-
-    The assistant behaves as a chatbot you can talk to. Image turns go straight
-    to the image tool. Otherwise a chatbot layer answers greetings, self-
-    introductions ("I am David") and everyday chit-chat about the assistant, the
-    app or general topics before anything else - so a bare "hi" is never turned
-    into a data report. Real questions then route by concept: a "how do I use the
-    app" question prefers a help topic, a data question runs its read-tool, and a
-    question naming a specific thing that matches no single concept triggers a
-    keyword search across the user's records. Only when even that finds nothing
-    does a transparent fallback explain what the assistant can do.
-
-    When the user has loaded the optional local model it strengthens this flow
-    without ever owning a figure: it may pick a more accurate data intent and
-    reword a read-tool's summary (rejected if it introduces a new number), and
-    it answers genuinely unmatched questions from retrieved project context
-    (help topics + the user's own records). If no model is loaded, or an answer
-    fails the honesty guard, the deterministic router answers - so every figure
-    still comes only from the grounded read-tools and nothing is fabricated.
-    """
+    """Answer a turn."""
     if asset_id is not None:
         return _tool_image(db, user, asset_id)
 
-    # Chatbot layer first: greetings, self-introductions ("I am David") and
-    # bare pleasantries are answered as conversation BEFORE the router or the
-    # optional model runs, so a small model can never turn them into a report.
-    # Real questions and prompts fall straight through.
-    chat = _social_reply(text, user)
-    if chat is not None:
-        return chat
+    model_ready = llm.is_ready()
+    if model_ready:
+        assisted = _model_assisted(db, user, text)
+        if assisted is not None:
+            return assisted
+
+    # Chatbot layer first for very short social turns only if model not ready
+    if not model_ready:
+        chat = _social_reply(text, user)
+        if chat is not None:
+            return chat
 
     intent = _detect_intent(text, False)
-    model_ready = llm.is_ready()
     if model_ready:
         chosen = llm.classify_intent(text)
         if chosen and chosen != "help":
@@ -1037,18 +1068,12 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     topic = assistant_help.match(text)
 
     if _is_howto(text) and topic is not None:
-        # A "how do I use the app" question: when a model is loaded it phrases
-        # the answer conversationally (the topic is in its retrieved context);
-        # otherwise we return the curated help topic directly.
         if model_ready:
             assisted = _model_assisted(db, user, text)
             if assisted is not None:
                 return assisted
         return _tool_apphelp(topic)
 
-    # A question that maps to a data concept: answer from grounded records so
-    # every figure is real. The model may only reword the summary, never own a
-    # number.
     if intent != "help":
         result = _run_tool(db, user, text, intent)
         if model_ready:
@@ -1059,24 +1084,15 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     if topic is not None:
         return _tool_apphelp(topic)
 
-    # No single data intent or help topic matched: search the database for
-    # records whose names/categories/descriptions match the question's own
-    # words, so a specific query ("my textbooks", "rent money") still gets a
-    # comprehensive, grounded answer built only from saved rows.
     search = _search_records(db, user, text)
     if search is not None and search["total"] > 0:
         return _tool_search(db, user, text, search, model_ready)
 
-    # Everything else is a genuine question or prompt - hand it to the loaded
-    # model, which answers from retrieved project context and general knowledge
-    # while the honesty guard still rejects any invented figure.
-    assisted = _model_assisted(db, user, text)
-    if assisted is not None:
-        return assisted
+    if model_ready:
+        assisted = _model_assisted(db, user, text)
+        if assisted is not None:
+            return assisted
 
-    # No model loaded (or it refused the question): hold a normal conversation
-    # about the assistant and the app deterministically, so everyday questions
-    # still get a real reply instead of only the records guide.
     conv = _conversation(text)
     if conv is not None:
         return conv
