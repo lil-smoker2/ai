@@ -50,9 +50,14 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description="Plan. Manage. Grow. - personal life-management platform.",
     )
+    allow_origins = {
+        settings.frontend_origin,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    }
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.frontend_origin],
+        allow_origins=list(allow_origins),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
