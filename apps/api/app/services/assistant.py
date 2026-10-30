@@ -1043,10 +1043,74 @@ def _run_tool(db: Session, user: User, text: str, intent: str) -> dict:
     return _tool_help(user)
 
 
+
+
+def _maybe_create_inventory_proposal(db: Session, user: User, text: str) -> dict | None:
+    """Create proposal to add inventory item if user asks to add something."""
+    low = _norm(text)
+    if any(w in low for w in ["add", "create", "buy", "need to get"]) and any(w in low for w in ["item", "product", "to inventory", "to my inventory"]):
+        # Try to extract item name
+        words = low.split()
+        # Simple extraction
+        for i, w in enumerate(words):
+            if w in ["add", "create"] and i + 1 < len(words):
+                name = words[i + 1 : i + 4]
+                name = " ".join([n for n in name if n not in ["an", "a", "the", "to", "my", "inventory"]])
+                if name:
+                    proposal = {
+                        "kind": "add_inventory_item",
+                        "title": f"Add “{name.title()}” to inventory",
+                        "payload": {
+                            "name": name.title(),
+                            "category": "General",
+                            "quantity": 0,
+                        },
+                    }
+                    return {
+                        "content": f"I can add '{name.title()}' to your inventory. This is a proposal - nothing will be saved until you confirm.",
+                        "cards": [],
+                        "proposal": proposal,
+                    }
+    return None
+
+
+def _maybe_create_task_proposal(db: Session, user: User, text: str) -> dict | None:
+    """Create proposal to add task if user asks."""
+    low = _norm(text)
+    if any(w in low for w in ["add task", "create task", "remind me", "todo", "to do"]) and not any(w in low for w in ["from goal", "from goals"]):
+        # Extract task
+        for phrase in ["add task", "create task", "remind me to", "todo", "to do"]:
+            if phrase in low:
+                idx = low.find(phrase) + len(phrase)
+                task_text = text[idx:].strip()
+                # Clean up
+                task_text = task_text.strip('.,!?')
+                if task_text and len(task_text) < 100:
+                    from app.models.tasks import Task
+                    proposal = {
+                        "kind": "create_tasks_from_goals",  # reuse existing kind
+                        "title": f"Create task: {task_text[:50]}",
+                        "payload": {"tasks": [{"title": task_text[:120], "priority": "medium", "due_on": None}]},
+                    }
+                    return {
+                        "content": f"I can create the task '{task_text}'. This is a proposal - confirm to add it.",
+                        "cards": [],
+                        "proposal": proposal,
+                    }
+    return None
+
 def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     """Answer a turn."""
     if asset_id is not None:
         return _tool_image(db, user, asset_id)
+
+    # Try to create proposals for add/delete/create requests first
+    prop = _maybe_create_inventory_proposal(db, user, text)
+    if prop:
+        return prop
+    prop = _maybe_create_task_proposal(db, user, text)
+    if prop:
+        return prop
 
     model_ready = llm.is_ready()
     if model_ready:
