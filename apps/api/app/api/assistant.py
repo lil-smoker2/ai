@@ -6,7 +6,7 @@ below persist those proposals as inert rows until the user explicitly confirms
 (or dismisses) them. Confirmation is the only path that writes records, and it
 reuses the same validated model logic the normal modules use.
 """
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
@@ -89,6 +89,23 @@ def send(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    # Cleanup old conversations (older than 30 days)
+    try:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+        old_convos = db.scalars(
+            select(Conversation).where(
+                Conversation.user_id == user.id,
+                Conversation.updated_at < cutoff
+            )
+        ).all()
+        for convo in old_convos:
+            db.query(ProposedAction).filter(ProposedAction.conversation_id == convo.id).delete()
+            db.query(Message).filter(Message.conversation_id == convo.id).delete()
+            db.delete(convo)
+        if old_convos:
+            db.commit()
+    except Exception:
+        pass
     if body.conversation_id is None:
         title = body.message.strip()[:60] or "New chat"
         convo = Conversation(user_id=user.id, title=title)
