@@ -115,6 +115,8 @@ class HostelOut(BaseModel):
 
 class FoodBudgetUpdate(BaseModel):
     weekly_budget_minor: int | None = Field(default=None, ge=0)
+    monthly_budget_minor: int | None = Field(default=None, ge=0)
+    period: str | None = Field(default=None, pattern="^(weekly|monthly)$")
     notes: str | None = None
 
 
@@ -123,10 +125,36 @@ class FoodBudgetOut(BaseModel):
 
     id: int
     weekly_budget_minor: int | None
+    monthly_budget_minor: int | None
+    period: str | None
     notes: str | None
     updated_at: datetime
     # Derived planning figures; null when no weekly budget is set.
     daily_estimate_minor: int | None = None
+
+
+class FoodStockCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    quantity_bought: float = Field(gt=0)
+    unit: str = Field(default="kg")
+    quantity_per_day: float = Field(gt=0)
+    purchase_date: date | None = None
+    notes: str | None = None
+
+
+class FoodStockOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    quantity_bought: float
+    unit: str
+    quantity_per_day: float
+    purchase_date: date
+    notes: str | None
+    created_at: datetime
+    days_remaining: float | None = None
+    depletion_date: date | None = None
 
 
 class StudentSummary(BaseModel):

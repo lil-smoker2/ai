@@ -546,9 +546,24 @@ export interface HostelOption {
 export interface FoodBudget {
   id: number;
   weekly_budget_minor: number | null;
+  monthly_budget_minor: number | null;
+  period: string | null;
   notes: string | null;
   updated_at: string;
   daily_estimate_minor: number | null;
+}
+
+export interface FoodStock {
+  id: number;
+  name: string;
+  quantity_bought: number;
+  unit: string;
+  quantity_per_day: number;
+  purchase_date: string;
+  notes: string | null;
+  created_at: string;
+  days_remaining: number | null;
+  depletion_date: string | null;
 }
 
 export interface StudentSummary {

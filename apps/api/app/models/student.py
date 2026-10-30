@@ -11,6 +11,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger,
+    Float,
     Date,
     DateTime,
     Enum,
@@ -101,5 +102,24 @@ class FoodBudget(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
     weekly_budget_minor: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    monthly_budget_minor: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    period: Mapped[str] = mapped_column(String(20), default="weekly")  # weekly or monthly
     notes: Mapped[str | None] = mapped_column(Text, default=None)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+
+
+class FoodStock(Base):
+    """Track food items purchased with quantity and consumption rate."""
+    __tablename__ = "food_stocks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    quantity_bought: Mapped[float] = mapped_column(Float, default=0)
+    unit: Mapped[str] = mapped_column(String(20), default="kg")
+    quantity_per_day: Mapped[float] = mapped_column(Float, default=0)
+    purchase_date: Mapped[date] = mapped_column(Date, default=date.today)
+    notes: Mapped[str | None] = mapped_column(Text, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
