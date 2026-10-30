@@ -1112,17 +1112,18 @@ def respond(db: Session, user: User, text: str, asset_id: str | None) -> dict:
     if prop:
         return prop
 
+    # A bare pleasantry is answered directly, whether or not a model is loaded:
+    # a small model misroutes "hi" to the budget tool, so the chatbot layer runs
+    # before any model intent override.
+    chat = _social_reply(text, user)
+    if chat is not None:
+        return chat
+
     model_ready = llm.is_ready()
     if model_ready:
         assisted = _model_assisted(db, user, text)
         if assisted is not None:
             return assisted
-
-    # Chatbot layer first for very short social turns only if model not ready
-    if not model_ready:
-        chat = _social_reply(text, user)
-        if chat is not None:
-            return chat
 
     intent = _detect_intent(text, False)
     if model_ready:
