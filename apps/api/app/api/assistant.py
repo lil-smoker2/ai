@@ -172,6 +172,20 @@ def web_search_endpoint(q: str, user: User = Depends(get_current_user)):
     return llm.web_search(q)
 
 
+@router.post("/stream")
+def stream_message(body: dict, user: User = Depends(get_current_user)):
+    from fastapi.responses import StreamingResponse
+    from app.services import llm
+    message = body.get("message", "")
+    
+    def generate():
+        for chunk in llm.stream_answer("", message):
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+    
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetail)
 def get_conversation(
     conversation_id: int,

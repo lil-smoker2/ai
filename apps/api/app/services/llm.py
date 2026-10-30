@@ -390,3 +390,44 @@ def answer(context: str, question: str) -> str | None:
     if cand and cand.strip():
         return cand
     return None
+
+
+def stream_answer(context: str, question: str):
+    """Stream answer from model."""
+    model = _loaded_model()
+    if model is None or not question.strip():
+        return
+    if not context.strip():
+        context = "No specific app data context provided."
+    enhanced_context = context
+    try:
+        search_keywords = ["what is", "who is", "how to", "explain", "define", "latest", "news", "weather"]
+        if any(k in question.lower() for k in search_keywords) and len(question.split()) > 2:
+            web_results = web_search(question)
+            if web_results.get("results"):
+                web_context = "\n\nWeb Search Results:"
+                for r in web_results["results"][:3]:
+                    web_context += f"\n- {r['title']}: {r['body']}"
+                enhanced_context = context + web_context
+    except Exception:
+        pass
+    
+    prompt = f"REFERENCE NOTES:\n{enhanced_context}\n\nQUESTION: {question}"
+    try:
+        with _infer_lock:
+            stream = model.create_chat_completion(
+                messages=[
+                    {"role": "system", "content": _ANSWER_SYSTEM},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=512,
+                temperature=0.3,
+                stream=True,
+            )
+        for chunk in stream:
+            if chunk.get("choices"):
+                delta = chunk["choices"][0].get("delta", {})
+                if delta.get("content"):
+                    yield delta["content"]
+    except Exception as e:
+        yield f"Error: {str(e)}"
