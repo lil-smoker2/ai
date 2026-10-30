@@ -103,8 +103,8 @@ class Settings(BaseSettings):
             p = Path(raw).expanduser()
             return p if p.is_absolute() else base / p
         preferred = (
-            base / "models" / "qwen2.5-0.5b-instruct-q2_k.gguf",
-            REPO_ROOT / "ai model" / "qwen2.5-0.5b-instruct-q2_k.gguf",
+            base / "models" / "Qwen2.5-3B-Instruct-Q3_K_L.gguf",
+            REPO_ROOT / "ai model" / "Qwen2.5-3B-Instruct-Q3_K_L.gguf",
         )
         for cand in preferred:
             if cand.is_file():
