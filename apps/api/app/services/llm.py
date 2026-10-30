@@ -25,6 +25,63 @@ import threading
 
 from app.core.config import get_settings
 
+# Web search capability
+import socket
+import json
+from datetime import datetime, timedelta
+
+_web_search_cache = {}
+_last_search_attempt = None
+
+
+def _has_internet():
+    """Check if internet is available."""
+    try:
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        return True
+    except OSError:
+        return False
+
+
+def web_search(query: str, max_results: int = 5) -> dict:
+    """Search the web using DuckDuckGo. If no internet, returns cached results or schedules retry."""
+    global _last_search_attempt
+    query = query.strip()
+    if not query:
+        return {"results": [], "source": "none", "error": None}
+    
+    # Check cache (valid for 1 hour)
+    cache_key = query.lower()
+    if cache_key in _web_search_cache:
+        cached = _web_search_cache[cache_key]
+        if datetime.now() - cached['time'] < timedelta(hours=1):
+            return cached['data']
+    
+    if not _has_internet():
+        _last_search_attempt = datetime.now()
+        return {
+            "results": [],
+            "source": "none",
+            "error": "No internet connection. Will search automatically when connection is restored.",
+            "retry_needed": True
+        }
+    
+    try:
+        from duckduckgo_search import DDGS
+        results = []
+        with DDGS() as ddgs:
+            for r in ddgs.text(query, max_results=max_results):
+                results.append({
+                    "title": r.get("title", ""),
+                    "href": r.get("href", ""),
+                    "body": r.get("body", "")
+                })
+        data = {"results": results, "source": "duckduckgo", "error": None}
+        _web_search_cache[cache_key] = {"time": datetime.now(), "data": data}
+        return data
+    except Exception as e:
+        return {"results": [], "source": "none", "error": str(e), "retry_needed": True}
+
 # The closed set of intents the router understands. The model may only ever
 # choose from these; anything else falls back to the deterministic detector.
 INTENTS = ("budget", "shortages", "priority", "obligations", "tasks", "help")
@@ -304,7 +361,23 @@ def answer(context: str, question: str) -> str | None:
         return None
     if not context.strip():
         context = "No specific app data context provided."
-    prompt = f"REFERENCE NOTES:\n{context}\n\nQUESTION: {question}"
+    
+    # Try web search for general knowledge questions not covered by app data
+    enhanced_context = context
+    try:
+        # Check if question might need web search
+        search_keywords = ["what is", "who is", "how to", "explain", "define", "latest", "news", "weather"]
+        if any(k in question.lower() for k in search_keywords) and len(question.split()) > 2:
+            web_results = web_search(question)
+            if web_results.get("results"):
+                web_context = "\n\nWeb Search Results:"
+                for r in web_results["results"][:3]:
+                    web_context += f"\n- {r['title']}: {r['body']}"
+                enhanced_context = context + web_context
+    except Exception:
+        pass
+    
+    prompt = f"REFERENCE NOTES:\n{enhanced_context}\n\nQUESTION: {question}"
     try:
         cand = _complete(model, _ANSWER_SYSTEM, prompt, max_tokens=512,
                          temperature=0.3)

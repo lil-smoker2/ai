@@ -149,6 +149,12 @@ def list_conversations(db: Session = Depends(get_db), user: User = Depends(get_c
     return out
 
 
+@router.get("/web-search")
+def web_search_endpoint(q: str, user: User = Depends(get_current_user)):
+    from app.services import llm
+    return llm.web_search(q)
+
+
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetail)
 def get_conversation(
     conversation_id: int,
