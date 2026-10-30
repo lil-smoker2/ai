@@ -41,6 +41,8 @@ class ListPage(BaseModel):
 
 class ItemCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    category: str | None = Field(default=None, max_length=80)
+    subcategory: str | None = Field(default=None, max_length=80)
     quantity_needed: int = Field(default=1, ge=1)
     estimated_unit_cost_minor: int | None = Field(default=None, ge=0)
     price_source: str = Field(default="estimate", pattern=f"^({'|'.join(PRICE_SOURCES)})$")
@@ -55,6 +57,8 @@ class ItemCreate(BaseModel):
 
 class ItemUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
+    category: str | None = Field(default=None, max_length=80)
+    subcategory: str | None = Field(default=None, max_length=80)
     quantity_needed: int | None = Field(default=None, ge=1)
     estimated_unit_cost_minor: int | None = Field(default=None, ge=0)
     price_source: str | None = Field(default=None, pattern=f"^({'|'.join(PRICE_SOURCES)})$")
@@ -74,6 +78,8 @@ class ItemOut(BaseModel):
     id: int
     list_id: int
     name: str
+    category: str | None = None
+    subcategory: str | None = None
     quantity_needed: int
     estimated_unit_cost_minor: int | None
     price_source: str

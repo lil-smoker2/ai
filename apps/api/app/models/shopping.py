@@ -48,6 +48,8 @@ class ShoppingItem(Base):
     list_id: Mapped[int] = mapped_column(ForeignKey("shopping_lists.id"), index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     name: Mapped[str] = mapped_column(String(120))
+    category: Mapped[str | None] = mapped_column(String(80), default=None)
+    subcategory: Mapped[str | None] = mapped_column(String(80), default=None)
     quantity_needed: Mapped[int] = mapped_column(Integer, default=1)
     # Null unit cost means unknown: totals then show "Price needed".
     estimated_unit_cost_minor: Mapped[int | None] = mapped_column(

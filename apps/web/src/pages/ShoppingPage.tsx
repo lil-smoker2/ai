@@ -21,6 +21,8 @@ interface NewListForm {
 
 interface NewItemForm {
   name: string;
+  category: string;
+  subcategory: string;
   quantity_needed: number;
   unit_cost: string; // major units; converted to minor
   seller: string;
@@ -103,6 +105,8 @@ export function ShoppingPage() {
       return api<ShoppingItem>(`/api/shopping/lists/${activeListId}/items`, {
         body: {
           name: v.name,
+          category: v.category || null,
+          subcategory: v.subcategory || null,
           quantity_needed: Number(v.quantity_needed) || 1,
           estimated_unit_cost_minor: unit,
           seller: v.seller || null,
@@ -240,6 +244,22 @@ export function ShoppingPage() {
             <input {...itemForm.register("name", { required: true })} />
           </label>
           <div className="btn-row">
+            <label>
+              Category
+              <select {...itemForm.register("category")}>
+                <option value="">Select...</option>
+                <option value="food">Food</option>
+                <option value="drinks">Drinks</option>
+                <option value="clothing">Clothing</option>
+                <option value="household">Household</option>
+                <option value="electronics">Electronics</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label>
+              Subcategory
+              <input {...itemForm.register("subcategory")} placeholder="e.g., vegetables, shirts" />
+            </label>
             <label>
               Quantity needed
               <input type="number" min={1} {...itemForm.register("quantity_needed")} />
